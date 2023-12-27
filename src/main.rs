@@ -1,3 +1,9 @@
+mod ast;
+
+use ast::builder::Builder;
+
 fn main() {
-    println!("Hello World!");
+    let builder = Builder::new();
+
+    println!("{:?}", builder);
 }
