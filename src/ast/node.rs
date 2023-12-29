@@ -13,7 +13,11 @@ pub enum Node {
     VariableAssignment {
         value: Expression,
     },
+    FunctionReturn {
+        return_value: Option<Expression>,
+    },
     FunctionDeclaration {
+        id: FunctionId,
         name: String,
         parameters: Vec<FunctionParameter>,
         return_type: Type,
@@ -39,7 +43,11 @@ impl From<(Type, String)> for FunctionParameter {
 #[derive(Debug, PartialEq)]
 pub enum Expression {
     ValueLiteral(Value),
+    FunctionCall(FunctionId),
 }
+
+#[derive(Debug, PartialEq)]
+pub struct FunctionId(pub String);
 
 #[derive(Debug, PartialEq)]
 pub enum Value {

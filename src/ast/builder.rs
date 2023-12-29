@@ -1,6 +1,6 @@
 use super::node::{
-    BoolValue, Expression, FunctionParameter, Node, Operation, Type, UnaryOperation, Value,
-    VariableDeclarationType,
+    BoolValue, Expression, FunctionId, FunctionParameter, Node, Operation, Type, UnaryOperation,
+    Value, VariableDeclarationType,
 };
 
 #[derive(Debug, PartialEq)]
@@ -26,11 +26,23 @@ impl StatementBuilder {
             var_type: None,
         }
     }
+
+    pub fn return_value(mut self, expression: Expression) -> Builder {
+        self.builder.nodes.push(Node::FunctionReturn {
+            return_value: Some(expression),
+        });
+        self.builder
+    }
 }
 
 impl VariableDeclarationBuilder {
     fn declare_type(mut self, var_type: Type) -> VariableDeclarationBuilder {
-        self.var_type = Some((VariableDeclarationType::Type(var_type)));
+        self.var_type = Some(VariableDeclarationType::Type(var_type));
+        self
+    }
+
+    fn infer_type(mut self) -> VariableDeclarationBuilder {
+        self.var_type = Some(VariableDeclarationType::Infer);
         self
     }
 
@@ -40,12 +52,12 @@ impl VariableDeclarationBuilder {
     }
 
     fn with_assignment(mut self, value: Expression) -> Builder {
-        let var_name = self
-            .var_name
-            .expect("builder should not be able to get to this point");
-        let var_type = self
-            .var_type
-            .expect("builder should not be able to get to this point");
+        let var_name = self.var_name.expect(
+            "variable declaration name is None, builder should not be able to get to this point",
+        );
+        let var_type = self.var_type.expect(
+            "Variable declaration type is None, builder should not be able to get to this point",
+        );
 
         self.builder.builder.nodes.extend([
             Node::VariableDeclaration {
@@ -59,12 +71,12 @@ impl VariableDeclarationBuilder {
     }
 
     fn without_assignment(mut self) -> Builder {
-        let var_name = self
-            .var_name
-            .expect("builder should not be able to get to this point");
-        let var_type = self
-            .var_type
-            .expect("builder should not be able to get to this point");
+        let var_name = self.var_name.expect(
+            "Variable declaration name is None, builder should not be able to get to this point",
+        );
+        let var_type = self.var_type.expect(
+            "Variable declaration type is None, builder should not be able to get to this point",
+        );
 
         self.builder.builder.nodes.push(Node::VariableDeclaration {
             var_name: var_name,
@@ -94,6 +106,7 @@ impl Builder {
 
     pub fn function_declaration(self) -> FunctionDeclarationBuilder {
         FunctionDeclarationBuilder {
+            id: None,
             builder: self,
             body: None,
             name: None,
@@ -106,6 +119,7 @@ impl Builder {
 #[derive(Debug, PartialEq)]
 pub struct FunctionDeclarationBuilder {
     builder: Builder,
+    id: Option<FunctionId>,
     name: Option<String>,
     parameters: Option<Vec<FunctionParameter>>,
     return_type: Option<Type>,
@@ -114,12 +128,18 @@ pub struct FunctionDeclarationBuilder {
 
 impl FunctionDeclarationBuilder {
     pub fn name(mut self, name: &str) -> Self {
+        self.id = Some(FunctionId(name.to_owned()));
         self.name = Some(name.to_owned());
         self
     }
 
     pub fn parameters(mut self, parameters: Vec<FunctionParameter>) -> Self {
         self.parameters = Some(parameters);
+        self
+    }
+
+    pub fn no_parameters(mut self) -> Self {
+        self.parameters = Some(Vec::new());
         self
     }
 
@@ -131,6 +151,7 @@ impl FunctionDeclarationBuilder {
     pub fn body(mut self, builder: impl FnOnce(Builder) -> Builder) -> Builder {
         self.body = Some(builder(Builder::new()).nodes);
         self.builder.nodes.push(Node::FunctionDeclaration {
+            id: self.id.expect("Function id should be set"),
             name: self.name.expect("function name should be set"),
             parameters: self.parameters.expect("function parameters should be set"),
             return_type: self
@@ -173,7 +194,8 @@ impl OperationBuilder {
 #[cfg(test)]
 mod tests {
     use crate::ast::node::{
-        BoolValue, Expression, FunctionParameter, Operation, Type, UIntValue, UnaryOperation,
+        BoolValue, Expression, FunctionId, FunctionParameter, Operation, Type, UIntValue,
+        UnaryOperation,
     };
 
     use super::*;
@@ -248,7 +270,7 @@ mod tests {
     }
 
     #[test]
-    fn test_something() {
+    fn function_declaration() {
         let result = Builder::new()
             .function_declaration()
             .name("my_function")
@@ -264,6 +286,7 @@ mod tests {
 
         let expected = Builder {
             nodes: vec![Node::FunctionDeclaration {
+                id: FunctionId("my_function".to_owned()),
                 name: "my_function".to_owned(),
                 parameters: vec![FunctionParameter {
                     param_type: Type::Boolean,
@@ -280,6 +303,51 @@ mod tests {
                     },
                 ],
             }],
+        };
+
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn function_call() {
+        let result = Builder::new()
+            .function_declaration()
+            .name("my_function")
+            .no_parameters()
+            .return_type(Type::Boolean)
+            .body(|body| {
+                body.statement()
+                    .return_value(Expression::ValueLiteral(Value::Boolean(BoolValue(true))))
+            })
+            .statement()
+            .var_declaration()
+            .infer_type()
+            .name("my_var")
+            .with_assignment(Expression::FunctionCall(FunctionId(
+                "my_function".to_owned(),
+            )));
+
+        let expected = Builder {
+            nodes: vec![
+                Node::FunctionDeclaration {
+                    id: FunctionId("my_function".to_owned()),
+                    name: "my_function".to_owned(),
+                    parameters: Vec::new(),
+                    return_type: Type::Boolean,
+                    body: vec![Node::FunctionReturn {
+                        return_value: Some(Expression::ValueLiteral(Value::Boolean(BoolValue(
+                            true,
+                        )))),
+                    }],
+                },
+                Node::VariableDeclaration {
+                    var_type: VariableDeclarationType::Infer,
+                    var_name: "my_var".to_owned(),
+                },
+                Node::VariableAssignment {
+                    value: Expression::FunctionCall(FunctionId("my_function".to_owned())),
+                },
+            ],
         };
 
         assert_eq!(result, expected);
