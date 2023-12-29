@@ -8,20 +8,39 @@ pub enum Node {
         info: NodeInfo,
         operation: Operation,
     },
+    VariableDeclaration {
+        type_info: NodeInfo,
+        name_info: NodeInfo,
+        var_type: VariableDeclarationType,
+        var_name: String,
+    },
+    VariableAssignment {
+        info: NodeInfo,
+        value: Expression,
+    },
 }
 
-impl Node {
-    pub fn info(&self) -> &NodeInfo {
-        match self {
-            Self::Literal { info, .. } | Self::Operation { info, .. } => info,
-        }
-    }
+#[derive(Debug, PartialEq)]
+pub enum Expression {
+    ValueLiteral(Value),
 }
 
 #[derive(Debug, PartialEq)]
 pub enum Value {
     UInt(UIntValue),
     Boolean(BoolValue),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum VariableDeclarationType {
+    Infer,
+    Type(Type),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Type {
+    UInt,
+    Boolean,
 }
 
 #[derive(Debug, PartialEq)]
