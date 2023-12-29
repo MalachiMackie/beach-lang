@@ -77,5 +77,5 @@ pub enum Operation {
 
 #[derive(Debug, PartialEq)]
 pub enum UnaryOperation {
-    Not { value: BoolValue },
+    Not { value: Expression },
 }
