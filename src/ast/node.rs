@@ -1,23 +1,39 @@
 #[derive(Debug, PartialEq)]
 pub enum Node {
     Literal {
-        info: NodeInfo,
         value: Value,
     },
     Operation {
-        info: NodeInfo,
         operation: Operation,
     },
     VariableDeclaration {
-        type_info: NodeInfo,
-        name_info: NodeInfo,
         var_type: VariableDeclarationType,
         var_name: String,
     },
     VariableAssignment {
-        info: NodeInfo,
         value: Expression,
     },
+    FunctionDeclaration {
+        name: String,
+        parameters: Vec<FunctionParameter>,
+        return_type: Type,
+        body: Vec<Node>,
+    },
+}
+
+#[derive(Debug, PartialEq)]
+pub struct FunctionParameter {
+    pub param_type: Type,
+    pub param_name: String,
+}
+
+impl From<(Type, String)> for FunctionParameter {
+    fn from((param_type, name): (Type, String)) -> Self {
+        FunctionParameter {
+            param_name: name,
+            param_type,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -56,10 +72,4 @@ pub enum Operation {
 #[derive(Debug, PartialEq)]
 pub enum UnaryOperation {
     Not { value: BoolValue },
-}
-
-#[derive(Debug, PartialEq)]
-pub struct NodeInfo {
-    pub line: u32,
-    pub character: u32,
 }
