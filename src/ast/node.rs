@@ -9,8 +9,6 @@ pub enum Node {
     VariableDeclaration {
         var_type: VariableDeclarationType,
         var_name: String,
-    },
-    VariableAssignment {
         value: Expression,
     },
     FunctionReturn {

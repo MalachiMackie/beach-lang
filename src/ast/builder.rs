@@ -59,29 +59,15 @@ impl VariableDeclarationBuilder {
             "Variable declaration type is None, builder should not be able to get to this point",
         );
 
-        self.builder.builder.nodes.extend([
-            Node::VariableDeclaration {
+        self.builder
+            .builder
+            .nodes
+            .extend([Node::VariableDeclaration {
                 var_name: var_name,
                 var_type: var_type,
-            },
-            Node::VariableAssignment { value },
-        ]);
+                value,
+            }]);
 
-        self.builder.builder
-    }
-
-    fn without_assignment(mut self) -> Builder {
-        let var_name = self.var_name.expect(
-            "Variable declaration name is None, builder should not be able to get to this point",
-        );
-        let var_type = self.var_type.expect(
-            "Variable declaration type is None, builder should not be able to get to this point",
-        );
-
-        self.builder.builder.nodes.push(Node::VariableDeclaration {
-            var_name: var_name,
-            var_type: var_type,
-        });
         self.builder.builder
     }
 }
@@ -233,12 +219,13 @@ mod tests {
             .var_declaration()
             .declare_type(Type::Boolean)
             .name("my_var_name")
-            .without_assignment();
+            .with_assignment(Expression::ValueLiteral(Value::Boolean(BoolValue(true))));
 
         let expected = Builder {
             nodes: vec![Node::VariableDeclaration {
                 var_type: VariableDeclarationType::Type(Type::Boolean),
                 var_name: "my_var_name".to_owned(),
+                value: Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
             }],
         };
 
@@ -255,15 +242,11 @@ mod tests {
             .with_assignment(Expression::ValueLiteral(Value::Boolean(BoolValue(true))));
 
         let expected = Builder {
-            nodes: vec![
-                Node::VariableDeclaration {
-                    var_type: VariableDeclarationType::Type(Type::Boolean),
-                    var_name: "my_var_name".to_owned(),
-                },
-                Node::VariableAssignment {
-                    value: Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
-                },
-            ],
+            nodes: vec![Node::VariableDeclaration {
+                var_type: VariableDeclarationType::Type(Type::Boolean),
+                var_name: "my_var_name".to_owned(),
+                value: Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
+            }],
         };
 
         assert_eq!(result, expected)
@@ -293,15 +276,11 @@ mod tests {
                     param_name: "param1".to_owned(),
                 }],
                 return_type: Type::UInt,
-                body: vec![
-                    Node::VariableDeclaration {
-                        var_type: VariableDeclarationType::Type(Type::Boolean),
-                        var_name: "my_var_name".to_owned(),
-                    },
-                    Node::VariableAssignment {
-                        value: Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
-                    },
-                ],
+                body: vec![Node::VariableDeclaration {
+                    var_type: VariableDeclarationType::Type(Type::Boolean),
+                    var_name: "my_var_name".to_owned(),
+                    value: Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
+                }],
             }],
         };
 
@@ -343,8 +322,6 @@ mod tests {
                 Node::VariableDeclaration {
                     var_type: VariableDeclarationType::Infer,
                     var_name: "my_var".to_owned(),
-                },
-                Node::VariableAssignment {
                     value: Expression::FunctionCall(FunctionId("my_function".to_owned())),
                 },
             ],
