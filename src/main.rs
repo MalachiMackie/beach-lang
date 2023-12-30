@@ -1,11 +1,14 @@
 mod ast;
+pub mod evaluation;
+
+use std::collections::HashMap;
 
 use ast::builders::ast_builder::AstBuilder;
 
 use crate::ast::node::{BoolValue, Expression, Type, UIntValue, Value};
 
 fn main() {
-    let builder = AstBuilder::new()
+    let ast = AstBuilder::new()
         .function_declaration()
         .name("my_function")
         .parameters(vec![(Type::UInt, "my_uint".to_owned()).into()])
@@ -45,10 +48,16 @@ fn main() {
         .no_parameters()
         .return_type(Type::Boolean)
         .body(|builder| {
-            builder
-                .statement()
-                .return_value(|expression_builder| expression_builder.function_call("my_function"))
-        });
+            builder.statement().return_value(|expression_builder| {
+                expression_builder.function_call(
+                    "my_function",
+                    vec![Expression::ValueLiteral(Value::UInt(UIntValue(10)))],
+                )
+            })
+        })
+        .statement()
+        .function_call("other_function", Vec::new())
+        .build();
 
-    println!("{:#?}", builder);
+    ast.evaluate(HashMap::new(), HashMap::new());
 }

@@ -1,4 +1,6 @@
-use crate::ast::node::Node;
+use std::collections::HashMap;
+
+use crate::ast::node::{Ast, FunctionDeclaration, FunctionId, Node};
 
 use super::{
     function_declaration_builder::FunctionDeclarationBuilder, statement_builder::StatementBuilder,
@@ -26,6 +28,28 @@ impl AstBuilder {
             name: None,
             parameters: None,
             return_type: None,
+        }
+    }
+
+    pub fn build(self) -> Ast {
+        let functions: HashMap<FunctionId, FunctionDeclaration> = self
+            .nodes
+            .iter()
+            .filter_map(|node| {
+                if let Node::FunctionDeclaration(function_declaration) = node {
+                    Some((
+                        function_declaration.id.clone(),
+                        function_declaration.to_owned(),
+                    ))
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        Ast {
+            functions,
+            nodes: self.nodes,
         }
     }
 }

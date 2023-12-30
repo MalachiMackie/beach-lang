@@ -1,4 +1,4 @@
-use crate::ast::node::{Expression, Node};
+use crate::ast::node::{Expression, FunctionId, Node};
 
 use super::{
     ast_builder::AstBuilder, expression_builder::ExpressionBuilder,
@@ -18,6 +18,15 @@ impl StatementBuilder {
         }
     }
 
+    pub fn function_call(mut self, function_id: &str, parameters: Vec<Expression>) -> AstBuilder {
+        self.builder.nodes.push(Node::FunctionCall {
+            function_id: FunctionId(function_id.to_owned()),
+            parameters,
+        });
+
+        self.builder
+    }
+
     pub fn return_value(
         mut self,
         expression: impl Fn(ExpressionBuilder) -> Expression,
@@ -31,7 +40,12 @@ impl StatementBuilder {
 
 #[cfg(test)]
 mod tests {
-    use crate::ast::node::{BoolValue, FunctionId, Type, Value, VariableDeclarationType};
+    use std::collections::HashMap;
+
+    use crate::ast::node::{
+        Ast, BoolValue, FunctionDeclaration, FunctionId, FunctionReturnType, Type, Value,
+        VariableDeclarationType,
+    };
 
     use super::*;
 
@@ -51,25 +65,33 @@ mod tests {
             .var_declaration()
             .infer_type()
             .name("my_var")
-            .with_assignment(|expression_builder| expression_builder.function_call("my_function"));
+            .with_assignment(|expression_builder| {
+                expression_builder.function_call("my_function", Vec::new())
+            });
 
         let expected = AstBuilder {
             nodes: vec![
-                Node::FunctionDeclaration {
+                Node::FunctionDeclaration(FunctionDeclaration {
                     id: FunctionId("my_function".to_owned()),
                     name: "my_function".to_owned(),
                     parameters: Vec::new(),
-                    return_type: Type::Boolean,
-                    body: vec![Node::FunctionReturn {
-                        return_value: Some(Expression::ValueLiteral(Value::Boolean(BoolValue(
-                            true,
-                        )))),
-                    }],
-                },
+                    return_type: FunctionReturnType::Type(Type::Boolean),
+                    body: Ast {
+                        nodes: vec![Node::FunctionReturn {
+                            return_value: Some(Expression::ValueLiteral(Value::Boolean(
+                                BoolValue(true),
+                            ))),
+                        }],
+                        functions: HashMap::new(),
+                    },
+                }),
                 Node::VariableDeclaration {
                     var_type: VariableDeclarationType::Infer,
                     var_name: "my_var".to_owned(),
-                    value: Expression::FunctionCall(FunctionId("my_function".to_owned())),
+                    value: Expression::FunctionCall(
+                        FunctionId("my_function".to_owned()),
+                        Vec::new(),
+                    ),
                 },
             ],
         };

@@ -1,4 +1,6 @@
-#[derive(Debug, PartialEq)]
+use std::collections::HashMap;
+
+#[derive(Clone, Debug, PartialEq)]
 pub enum Node {
     VariableDeclaration {
         var_type: VariableDeclarationType,
@@ -8,16 +10,29 @@ pub enum Node {
     FunctionReturn {
         return_value: Option<Expression>,
     },
-    FunctionDeclaration {
-        id: FunctionId,
-        name: String,
-        parameters: Vec<FunctionParameter>,
-        return_type: Type,
-        body: Vec<Node>,
-    },
+    FunctionDeclaration(FunctionDeclaration),
+    FunctionCall {
+        function_id: FunctionId,
+        parameters: Vec<Expression>
+    }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
+pub struct FunctionDeclaration {
+    pub id: FunctionId,
+    pub name: String,
+    pub parameters: Vec<FunctionParameter>,
+    pub return_type: FunctionReturnType,
+    pub body: Ast,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum FunctionReturnType {
+    Type(Type),
+    Void,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct FunctionParameter {
     pub param_type: Type,
     pub param_name: String,
@@ -32,45 +47,52 @@ impl From<(Type, String)> for FunctionParameter {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Expression {
     ValueLiteral(Value),
-    FunctionCall(FunctionId),
+    FunctionCall(FunctionId, Vec<Expression>),
     Operation(Operation),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Hash, Clone, Eq)]
 pub struct FunctionId(pub String);
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Value {
     UInt(UIntValue),
     Boolean(BoolValue),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum VariableDeclarationType {
     Infer,
     Type(Type),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Type {
     UInt,
     Boolean,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct UIntValue(pub u32);
-#[derive(Debug, PartialEq)]
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct BoolValue(pub bool);
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Operation {
     Unary(UnaryOperation),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum UnaryOperation {
     Not { value: Box<Expression> },
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Ast {
+    pub functions: HashMap<FunctionId, FunctionDeclaration>,
+    pub nodes: Vec<Node>,
 }
