@@ -1,6 +1,9 @@
 use crate::ast::node::{Expression, Node, Type, VariableDeclarationType};
 
-use super::{ast_builder::AstBuilder, statement_builder::StatementBuilder};
+use super::{
+    ast_builder::AstBuilder, expression_builder::ExpressionBuilder,
+    statement_builder::StatementBuilder,
+};
 
 pub struct VariableDeclarationBuilder {
     pub(super) builder: StatementBuilder,
@@ -24,7 +27,10 @@ impl VariableDeclarationBuilder {
         self
     }
 
-    pub fn with_assignment(mut self, value: Expression) -> AstBuilder {
+    pub fn with_assignment<TExpressionFn: Fn(ExpressionBuilder) -> Expression>(
+        mut self,
+        value_fn: TExpressionFn,
+    ) -> AstBuilder {
         let var_name = self.var_name.expect(
             "variable declaration name is None, builder should not be able to get to this point",
         );
@@ -38,7 +44,7 @@ impl VariableDeclarationBuilder {
             .extend([Node::VariableDeclaration {
                 var_name: var_name,
                 var_type: var_type,
-                value,
+                value: value_fn(ExpressionBuilder {}),
             }]);
 
         self.builder.builder
@@ -57,7 +63,9 @@ mod tests {
             .var_declaration()
             .declare_type(Type::Boolean)
             .name("my_var_name")
-            .with_assignment(Expression::ValueLiteral(Value::Boolean(BoolValue(true))));
+            .with_assignment(|expression_builder| {
+                expression_builder.value_literal(Value::Boolean(BoolValue(true)))
+            });
 
         let expected = AstBuilder {
             nodes: vec![Node::VariableDeclaration {
@@ -77,7 +85,9 @@ mod tests {
             .var_declaration()
             .declare_type(Type::Boolean)
             .name("my_var_name")
-            .with_assignment(Expression::ValueLiteral(Value::Boolean(BoolValue(true))));
+            .with_assignment(|expression_builder| {
+                expression_builder.value_literal(Value::Boolean(BoolValue(true)))
+            });
 
         let expected = AstBuilder {
             nodes: vec![Node::VariableDeclaration {

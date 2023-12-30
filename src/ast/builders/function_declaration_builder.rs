@@ -67,7 +67,7 @@ mod tests {
                     .var_declaration()
                     .declare_type(Type::Boolean)
                     .name("my_var_name")
-                    .with_assignment(Expression::ValueLiteral(Value::Boolean(BoolValue(true))))
+                    .with_assignment(|expression_builder| expression_builder.value_literal(Value::Boolean(BoolValue(true))))
             });
 
         let expected = AstBuilder {

@@ -1,6 +1,9 @@
 use crate::ast::node::{Expression, Node};
 
-use super::{ast_builder::AstBuilder, variable_declaration_builder::VariableDeclarationBuilder};
+use super::{
+    ast_builder::AstBuilder, expression_builder::ExpressionBuilder,
+    variable_declaration_builder::VariableDeclarationBuilder,
+};
 
 pub struct StatementBuilder {
     pub(super) builder: AstBuilder,
@@ -15,9 +18,12 @@ impl StatementBuilder {
         }
     }
 
-    pub fn return_value(mut self, expression: Expression) -> AstBuilder {
+    pub fn return_value(
+        mut self,
+        expression: impl Fn(ExpressionBuilder) -> Expression,
+    ) -> AstBuilder {
         self.builder.nodes.push(Node::FunctionReturn {
-            return_value: Some(expression),
+            return_value: Some(expression(ExpressionBuilder {})),
         });
         self.builder
     }
@@ -37,16 +43,15 @@ mod tests {
             .no_parameters()
             .return_type(Type::Boolean)
             .body(|body| {
-                body.statement()
-                    .return_value(Expression::ValueLiteral(Value::Boolean(BoolValue(true))))
+                body.statement().return_value(|expression_builder| {
+                    expression_builder.value_literal(Value::Boolean(BoolValue(true)))
+                })
             })
             .statement()
             .var_declaration()
             .infer_type()
             .name("my_var")
-            .with_assignment(Expression::FunctionCall(FunctionId(
-                "my_function".to_owned(),
-            )));
+            .with_assignment(|expression_builder| expression_builder.function_call("my_function"));
 
         let expected = AstBuilder {
             nodes: vec![

@@ -1,11 +1,5 @@
 #[derive(Debug, PartialEq)]
 pub enum Node {
-    Literal {
-        value: Value,
-    },
-    Operation {
-        operation: Operation,
-    },
     VariableDeclaration {
         var_type: VariableDeclarationType,
         var_name: String,
@@ -42,6 +36,7 @@ impl From<(Type, String)> for FunctionParameter {
 pub enum Expression {
     ValueLiteral(Value),
     FunctionCall(FunctionId),
+    Operation(Operation),
 }
 
 #[derive(Debug, PartialEq)]
@@ -77,5 +72,5 @@ pub enum Operation {
 
 #[derive(Debug, PartialEq)]
 pub enum UnaryOperation {
-    Not { value: Expression },
+    Not { value: Box<Expression> },
 }
