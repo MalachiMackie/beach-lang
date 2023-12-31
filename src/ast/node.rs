@@ -13,8 +13,8 @@ pub enum Node {
     FunctionDeclaration(FunctionDeclaration),
     FunctionCall {
         function_id: FunctionId,
-        parameters: Vec<Expression>
-    }
+        parameters: Vec<Expression>,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -33,14 +33,19 @@ pub enum FunctionReturnType {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct FunctionParameter {
-    pub param_type: Type,
-    pub param_name: String,
+pub enum FunctionParameter {
+    FunctionParameter {
+        param_type: Type,
+        param_name: String,
+    },
+    IntrinsicAny {
+        param_name: String,
+    },
 }
 
 impl From<(Type, String)> for FunctionParameter {
     fn from((param_type, name): (Type, String)) -> Self {
-        FunctionParameter {
+        FunctionParameter::FunctionParameter {
             param_name: name,
             param_type,
         }
@@ -52,6 +57,7 @@ pub enum Expression {
     ValueLiteral(Value),
     FunctionCall(FunctionId, Vec<Expression>),
     Operation(Operation),
+    VariableAccess(String),
 }
 
 #[derive(Debug, PartialEq, Hash, Clone, Eq)]
@@ -93,6 +99,51 @@ pub enum UnaryOperation {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Ast {
-    pub functions: HashMap<FunctionId, FunctionDeclaration>,
+    pub functions: HashMap<FunctionId, Function>,
     pub nodes: Vec<Node>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Function {
+    CustomFunction {
+        id: FunctionId,
+        name: String,
+        parameters: Vec<FunctionParameter>,
+        return_type: FunctionReturnType,
+        body: Ast,
+    },
+    Intrinsic {
+        id: FunctionId,
+        name: String,
+        parameters: Vec<FunctionParameter>,
+        return_type: FunctionReturnType,
+    },
+}
+
+impl Function {
+    pub fn id(&self) -> &FunctionId {
+        match self {
+            Function::CustomFunction { id, .. } | Function::Intrinsic { id, .. } => id,
+        }
+    }
+
+    pub fn name(&self) -> &String {
+        match self {
+            Function::CustomFunction { name, .. } | Function::Intrinsic { name, .. } => name,
+        }
+    }
+
+    pub fn parameters(&self) -> &[FunctionParameter] {
+        match self {
+            Function::CustomFunction { parameters, .. }
+            | Function::Intrinsic { parameters, .. } => parameters,
+        }
+    }
+
+    pub fn return_type(&self) -> &FunctionReturnType {
+        match self {
+            Function::CustomFunction { return_type, .. }
+            | Function::Intrinsic { return_type, .. } => return_type,
+        }
+    }
 }

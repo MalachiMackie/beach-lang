@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::ast::node::{Expression, FunctionId, Node};
 
 use super::{
@@ -18,10 +20,22 @@ impl StatementBuilder {
         }
     }
 
-    pub fn function_call(mut self, function_id: &str, parameters: Vec<Expression>) -> AstBuilder {
+    pub fn function_call(
+        mut self,
+        function_call_fn: impl Fn(FunctionCallBuilder) -> FunctionCallBuilder,
+    ) -> AstBuilder {
+        let function_call_builder = function_call_fn(FunctionCallBuilder {
+            function_id: None,
+            parameters: None,
+        });
+
         self.builder.nodes.push(Node::FunctionCall {
-            function_id: FunctionId(function_id.to_owned()),
-            parameters,
+            function_id: function_call_builder
+                .function_id
+                .expect("function id to be set"),
+            parameters: function_call_builder
+                .parameters
+                .expect("parameters to be set"),
         });
 
         self.builder
@@ -35,6 +49,35 @@ impl StatementBuilder {
             return_value: Some(expression(ExpressionBuilder {})),
         });
         self.builder
+    }
+}
+
+pub struct FunctionCallBuilder {
+    pub function_id: Option<FunctionId>,
+    pub parameters: Option<Vec<Expression>>,
+}
+
+impl FunctionCallBuilder {
+    pub fn function_id(mut self, function_id: &str) -> Self {
+        self.function_id = Some(FunctionId(function_id.to_owned()));
+        self
+    }
+
+    pub fn parameter(mut self, expression_fn: impl Fn(ExpressionBuilder) -> Expression) -> Self {
+        let expression = expression_fn(ExpressionBuilder {});
+
+        let Some(parameters) = &mut self.parameters else {
+            self.parameters = Some(vec![expression]);
+            return self;
+        };
+
+        parameters.push(expression);
+        self
+    }
+
+    pub fn no_parameters(mut self) -> Self {
+        self.parameters = Some(Vec::new());
+        self
     }
 }
 
@@ -66,7 +109,8 @@ mod tests {
             .infer_type()
             .name("my_var")
             .with_assignment(|expression_builder| {
-                expression_builder.function_call("my_function", Vec::new())
+                expression_builder
+                    .function_call(|builder| builder.function_id("my_function").no_parameters())
             });
 
         let expected = AstBuilder {

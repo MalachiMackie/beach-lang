@@ -1,18 +1,22 @@
+pub mod intrinsics;
+
 use core::panic;
 use std::collections::HashMap;
 
 use crate::ast::node::{
-    Ast, Expression, FunctionDeclaration, FunctionId, FunctionReturnType, Node, Operation,
-    UnaryOperation, Value, BoolValue,
+    Ast, BoolValue, Expression, Function, FunctionDeclaration, FunctionId, FunctionParameter,
+    FunctionReturnType, Node, Operation, UnaryOperation, Value,
 };
 
-type Functions = HashMap<FunctionId, FunctionDeclaration>;
+use self::intrinsics::evaluate_intrinsic_function;
+
+type Functions = HashMap<FunctionId, Function>;
 
 impl Ast {
     pub fn evaluate(
         &self,
         mut local_variables: HashMap<String, Value>,
-        mut functions: HashMap<FunctionId, FunctionDeclaration>,
+        mut functions: HashMap<FunctionId, Function>,
     ) -> Option<Value> {
         let mut call_stack: Vec<FunctionId> = Vec::new();
         let mut return_value = None;
@@ -38,12 +42,15 @@ impl Node {
             Node::VariableDeclaration {
                 var_name, value, ..
             } => {
-                local_variables.insert(var_name.to_owned(), value.evaluate(functions));
+                local_variables.insert(
+                    var_name.to_owned(),
+                    value.evaluate(functions, &local_variables),
+                );
                 None
             }
             Node::FunctionReturn { return_value } => {
                 let return_value = if let Some(expression) = return_value {
-                    let value = expression.evaluate(functions);
+                    let value = expression.evaluate(functions, &local_variables);
                     Some(value)
                 } else {
                     None
@@ -59,88 +66,106 @@ impl Node {
                 parameters,
             } => {
                 let function = &functions[function_id];
-                function.evaluate(parameters.clone(), functions)
+                function.evaluate(parameters.clone(), &local_variables, functions)
             }
         }
     }
 }
 
 impl Expression {
-    pub fn evaluate(&self, functions: &Functions) -> Value {
+    pub fn evaluate(
+        &self,
+        functions: &Functions,
+        local_variables: &HashMap<String, Value>,
+    ) -> Value {
         match self {
-            Expression::ValueLiteral(value) => {
-                println!("expression->ValueLiteral {:?}", value);
-                value.clone()
-            }
+            Expression::ValueLiteral(value) => value.clone(),
             Expression::FunctionCall(function_id, parameters) => {
-                println!(
-                    "expression->FunctionCall function_id: {:?}, parameters: {:?}",
-                    function_id, parameters
-                );
                 let function = &functions[function_id];
-                if matches!(function.return_type, FunctionReturnType::Void) {
+                if matches!(function.return_type(), FunctionReturnType::Void) {
                     panic!("Function expected to be value, but is void");
                 };
 
                 function
-                    .evaluate(parameters.clone(), functions)
+                    .evaluate(parameters.clone(), local_variables, functions)
                     .expect("function has a non void return type")
             }
-            Expression::Operation(operation) => {
-                println!("expression->Operation {:?}", operation);
-                operation.evaluate(functions)
-            }
+            Expression::Operation(operation) => operation.evaluate(functions, local_variables),
+            Expression::VariableAccess(variable_name) => local_variables
+                .get(variable_name)
+                .expect("variable should exist")
+                .clone(),
         }
     }
 }
 
-impl FunctionDeclaration {
+fn evaluate_custom_function(
+    body: &Ast,
+    function_name: &str,
+    parameters: HashMap<String, Value>,
+    functions: &Functions,
+) -> Option<Value> {
+    body.evaluate(parameters, functions.clone())
+}
+
+impl Function {
     pub fn evaluate(
         &self,
         parameter_expressions: Vec<Expression>,
+        local_variables: &HashMap<String, Value>,
         functions: &Functions,
     ) -> Option<Value> {
-        if parameter_expressions.len() != self.parameters.len() {
+        if parameter_expressions.len() != self.parameters().len() {
             panic!(
                 "Expected {} parameters, but found {}",
-                self.parameters.len(),
+                self.parameters().len(),
                 parameter_expressions.len()
             );
         }
 
-        let parameters: Vec<Value> = parameter_expressions
+        let parameter_values: Vec<Value> = parameter_expressions
             .into_iter()
-            .map(|expression| expression.evaluate(functions))
+            .map(|expression| expression.evaluate(functions, local_variables))
             .collect();
 
         let local_variables = self
-            .parameters
+            .parameters()
             .iter()
             .enumerate()
             .map(|(i, function_parameter)| {
-                (function_parameter.param_name.clone(), parameters[i].clone())
+                let param_name = match function_parameter {
+                    FunctionParameter::FunctionParameter { param_name, .. }
+                    | FunctionParameter::IntrinsicAny { param_name } => param_name,
+                };
+                (param_name.clone(), parameter_values[i].clone())
             })
             .collect();
 
-        println!(
-            "evaluate functionDeclaration {:?} {:?}",
-            self.name, local_variables
-        );
-
-        self.body.evaluate(local_variables, functions.clone())
+        match self {
+            Function::CustomFunction { name, body, .. } => {
+                evaluate_custom_function(body, &name, local_variables, functions)
+            }
+            Function::Intrinsic { id, .. } => {
+                evaluate_intrinsic_function(id, &local_variables, functions)
+            }
+        }
     }
 }
 
 impl Operation {
-    pub fn evaluate(&self, functions: &Functions) -> Value {
+    pub fn evaluate(
+        &self,
+        functions: &Functions,
+        local_variables: &HashMap<String, Value>,
+    ) -> Value {
         match self {
             Operation::Unary(UnaryOperation::Not { value }) => {
-                let bool_value = value.evaluate(functions);
+                let bool_value = value.evaluate(functions, local_variables);
                 let Value::Boolean(BoolValue(val)) =bool_value else {
                     panic!("Expected not argument to be boolean")
                 };
                 Value::Boolean(BoolValue(!val))
-            },
+            }
         }
     }
 }

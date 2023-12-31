@@ -87,7 +87,7 @@ mod tests {
             nodes: vec![Node::FunctionDeclaration(FunctionDeclaration {
                 id: FunctionId("my_function".to_owned()),
                 name: "my_function".to_owned(),
-                parameters: vec![FunctionParameter {
+                parameters: vec![FunctionParameter::FunctionParameter {
                     param_type: Type::Boolean,
                     param_name: "param1".to_owned(),
                 }],
@@ -98,7 +98,7 @@ mod tests {
                         var_name: "my_var_name".to_owned(),
                         value: Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
                     }],
-                    functions: HashMap::new()
+                    functions: HashMap::new(),
                 },
             })],
         };

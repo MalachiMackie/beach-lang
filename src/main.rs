@@ -4,6 +4,7 @@ pub mod evaluation;
 use std::collections::HashMap;
 
 use ast::builders::ast_builder::AstBuilder;
+use evaluation::intrinsics::get_intrinsic_functions;
 
 use crate::ast::node::{BoolValue, Expression, Type, UIntValue, Value};
 
@@ -41,6 +42,24 @@ fn main() {
                     expression_builder.value_literal(Value::Boolean(BoolValue(true)))
                 })
                 .statement()
+                .function_call(|function_call_builder| {
+                    function_call_builder
+                        .function_id("print")
+                        .parameter(|param_builder| param_builder.variable("my_bool"))
+                })
+                .statement()
+                .function_call(|function_call_builder| {
+                    function_call_builder
+                        .function_id("print")
+                        .parameter(|param_builder| param_builder.variable("my_value"))
+                })
+                .statement()
+                .function_call(|function_call_builder| {
+                    function_call_builder
+                        .function_id("print")
+                        .parameter(|param_builder| param_builder.variable("my_uint"))
+                })
+                .statement()
                 .return_value(|_| Expression::ValueLiteral(Value::Boolean(BoolValue(true))))
         })
         .function_declaration()
@@ -49,15 +68,22 @@ fn main() {
         .return_type(Type::Boolean)
         .body(|builder| {
             builder.statement().return_value(|expression_builder| {
-                expression_builder.function_call(
-                    "my_function",
-                    vec![Expression::ValueLiteral(Value::UInt(UIntValue(10)))],
-                )
+                expression_builder.function_call(|function_call_builder| {
+                    function_call_builder.function_id("my_function").parameter(
+                        |expression_builder| {
+                            expression_builder.value_literal(Value::UInt(UIntValue(10)))
+                        },
+                    )
+                })
             })
         })
         .statement()
-        .function_call("other_function", Vec::new())
+        .function_call(|function_call_builder| {
+            function_call_builder
+                .function_id("other_function")
+                .no_parameters()
+        })
         .build();
 
-    ast.evaluate(HashMap::new(), HashMap::new());
+    ast.evaluate(HashMap::new(), get_intrinsic_functions());
 }
