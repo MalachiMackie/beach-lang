@@ -78,7 +78,9 @@ impl IfStatementBuilder {
 mod tests {
     use crate::ast::{
         builders::if_statement_builder::IfStatementBuilder,
-        node::{BoolValue, ElseIfBlock, Expression, FunctionId, IfStatement, Node, Value},
+        node::{
+            BoolValue, ElseIfBlock, Expression, FunctionCall, FunctionId, IfStatement, Node, Value,
+        },
     };
 
     #[test]
@@ -86,8 +88,13 @@ mod tests {
         let actual = IfStatementBuilder::new()
             .check_expression(|check| check.value_literal(Value::Boolean(BoolValue(true))))
             .body(|body| {
-                body.function_call(|function_call| {
-                    function_call.function_id("my_function").no_parameters()
+                body.statement(|statement| {
+                    statement.function_call(|function_call| {
+                        function_call
+                            .function_id("my_function")
+                            .no_parameters()
+                            .build()
+                    })
                 })
                 .build()
             })
@@ -95,10 +102,10 @@ mod tests {
 
         let expected = Node::IfStatement(IfStatement {
             check_expression: Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
-            if_block: vec![Node::FunctionCall {
+            if_block: vec![Node::FunctionCall(FunctionCall {
                 function_id: FunctionId("my_function".to_owned()),
                 parameters: Vec::new(),
-            }],
+            })],
             else_block: None,
             else_if_blocks: Vec::new(),
         });
@@ -111,16 +118,26 @@ mod tests {
         let actual = IfStatementBuilder::new()
             .check_expression(|check| check.value_literal(Value::Boolean(BoolValue(true))))
             .body(|body| {
-                body.function_call(|function_call| {
-                    function_call.function_id("my_function").no_parameters()
+                body.statement(|statement| {
+                    statement.function_call(|function_call| {
+                        function_call
+                            .function_id("my_function")
+                            .no_parameters()
+                            .build()
+                    })
                 })
                 .build()
             })
             .else_if(
                 |check| check.value_literal(Value::Boolean(BoolValue(true))),
                 |body| {
-                    body.function_call(|function_call| {
-                        function_call.function_id("my_function").no_parameters()
+                    body.statement(|statement| {
+                        statement.function_call(|function_call| {
+                            function_call
+                                .function_id("my_function")
+                                .no_parameters()
+                                .build()
+                        })
                     })
                     .build()
                 },
@@ -129,17 +146,17 @@ mod tests {
 
         let expected = Node::IfStatement(IfStatement {
             check_expression: Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
-            if_block: vec![Node::FunctionCall {
+            if_block: vec![Node::FunctionCall(FunctionCall {
                 function_id: FunctionId("my_function".to_owned()),
                 parameters: Vec::new(),
-            }],
+            })],
             else_block: None,
             else_if_blocks: vec![ElseIfBlock {
                 check: Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
-                block: vec![Node::FunctionCall {
+                block: vec![Node::FunctionCall(FunctionCall {
                     function_id: FunctionId("my_function".to_owned()),
                     parameters: Vec::new(),
-                }],
+                })],
             }],
         });
 
@@ -151,14 +168,24 @@ mod tests {
         let actual = IfStatementBuilder::new()
             .check_expression(|check| check.value_literal(Value::Boolean(BoolValue(true))))
             .body(|body| {
-                body.function_call(|function_call| {
-                    function_call.function_id("my_function").no_parameters()
+                body.statement(|statement| {
+                    statement.function_call(|function_call| {
+                        function_call
+                            .function_id("my_function")
+                            .no_parameters()
+                            .build()
+                    })
                 })
                 .build()
             })
             .else_block(|body| {
-                body.function_call(|function_call| {
-                    function_call.function_id("my_function").no_parameters()
+                body.statement(|statement| {
+                    statement.function_call(|function_call| {
+                        function_call
+                            .function_id("my_function")
+                            .no_parameters()
+                            .build()
+                    })
                 })
                 .build()
             })
@@ -166,14 +193,14 @@ mod tests {
 
         let expected = Node::IfStatement(IfStatement {
             check_expression: Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
-            if_block: vec![Node::FunctionCall {
+            if_block: vec![Node::FunctionCall(FunctionCall {
                 function_id: FunctionId("my_function".to_owned()),
                 parameters: Vec::new(),
-            }],
-            else_block: Some(vec![Node::FunctionCall {
+            })],
+            else_block: Some(vec![Node::FunctionCall(FunctionCall {
                 function_id: FunctionId("my_function".to_owned()),
                 parameters: Vec::new(),
-            }]),
+            })]),
             else_if_blocks: Vec::new(),
         });
 

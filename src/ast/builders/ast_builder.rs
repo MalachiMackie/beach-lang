@@ -1,12 +1,9 @@
 use std::collections::HashMap;
 
-use crate::ast::node::{Ast, Expression, Function, FunctionId, Node};
+use crate::ast::node::{Ast, Function, FunctionId, Node};
 
 use super::{
-    expression_builder::ExpressionBuilder, function_call_builder::FunctionCallBuilder,
-    function_declaration_builder::FunctionDeclarationBuilder,
-    if_statement_builder::IfStatementBuilder,
-    variable_declaration_builder::VariableDeclarationBuilder,
+    function_declaration_builder::FunctionDeclarationBuilder, statement_builder::StatementBuilder,
 };
 
 #[derive(Debug, PartialEq)]
@@ -19,62 +16,8 @@ impl AstBuilder {
         AstBuilder { nodes: Vec::new() }
     }
 
-    pub fn return_void(mut self) -> Self {
-        self.nodes.push(Node::FunctionReturn { return_value: None });
-
-        self
-    }
-
-    pub fn var_declaration(
-        mut self,
-        var_declaration_fn: impl Fn(VariableDeclarationBuilder) -> Node,
-    ) -> AstBuilder {
-        let var_declaration_node = var_declaration_fn(VariableDeclarationBuilder {
-            var_name: None,
-            var_type: None,
-        });
-
-        self.nodes.push(var_declaration_node);
-
-        self
-    }
-
-    pub fn if_statement(mut self, if_statement_fn: impl Fn(IfStatementBuilder) -> Node) -> Self {
-        let if_statement = if_statement_fn(IfStatementBuilder::new());
-
-        self.nodes.push(if_statement);
-
-        self
-    }
-
-    pub fn function_call(
-        mut self,
-        function_call_fn: impl Fn(FunctionCallBuilder) -> FunctionCallBuilder,
-    ) -> AstBuilder {
-        let function_call_builder = function_call_fn(FunctionCallBuilder {
-            function_id: None,
-            parameters: None,
-        });
-
-        self.nodes.push(Node::FunctionCall {
-            function_id: function_call_builder
-                .function_id
-                .expect("function id to be set"),
-            parameters: function_call_builder
-                .parameters
-                .expect("parameters to be set"),
-        });
-
-        self
-    }
-
-    pub fn return_value(
-        mut self,
-        expression: impl Fn(ExpressionBuilder) -> Expression,
-    ) -> AstBuilder {
-        self.nodes.push(Node::FunctionReturn {
-            return_value: Some(expression(ExpressionBuilder {})),
-        });
+    pub fn statement(mut self, statement_fn: impl Fn(StatementBuilder) -> Node) -> Self {
+        self.nodes.push(statement_fn(StatementBuilder::default()));
         self
     }
 

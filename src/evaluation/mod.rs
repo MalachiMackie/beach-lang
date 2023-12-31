@@ -5,7 +5,7 @@ use std::collections::HashMap;
 
 use crate::ast::node::{
     Ast, BinaryOperation, BoolValue, Expression, Function, FunctionId, FunctionParameter,
-    FunctionReturnType, IfStatement, Node, Operation, UIntValue, UnaryOperation, Value,
+    FunctionReturnType, IfStatement, Node, Operation, UIntValue, UnaryOperation, Value, FunctionCall,
 };
 
 use self::intrinsics::evaluate_intrinsic_function;
@@ -90,10 +90,7 @@ impl Node {
                 };
             }
             Node::FunctionDeclaration(_) => {}
-            Node::FunctionCall {
-                function_id,
-                parameters,
-            } => {
+            Node::FunctionCall(FunctionCall{function_id, parameters}) => {
                 let function = &functions[function_id];
                 function.evaluate(parameters.clone(), &local_variables, functions);
             }

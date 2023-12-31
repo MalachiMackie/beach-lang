@@ -11,10 +11,7 @@ pub enum Node {
         return_value: Option<Expression>,
     },
     FunctionDeclaration(FunctionDeclaration),
-    FunctionCall {
-        function_id: FunctionId,
-        parameters: Vec<Expression>,
-    },
+    FunctionCall(FunctionCall),
     IfStatement(IfStatement),
 }
 

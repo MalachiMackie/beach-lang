@@ -79,13 +79,15 @@ mod tests {
             .parameters(vec![(Type::Boolean, "param1".to_owned()).into()])
             .return_type(Type::UInt)
             .body(|builder: AstBuilder| {
-                builder.var_declaration(|var_declaration_builder| {
-                    var_declaration_builder
-                        .declare_type(Type::Boolean)
-                        .name("my_var_name")
-                        .with_assignment(|expression_builder| {
-                            expression_builder.value_literal(Value::Boolean(BoolValue(true)))
-                        })
+                builder.statement(|statement| {
+                    statement.var_declaration(|var_declaration_builder| {
+                        var_declaration_builder
+                            .declare_type(Type::Boolean)
+                            .name("my_var_name")
+                            .with_assignment(|expression_builder| {
+                                expression_builder.value_literal(Value::Boolean(BoolValue(true)))
+                            })
+                    })
                 })
             });
 
@@ -117,8 +119,10 @@ mod tests {
             .no_parameters()
             .return_type(Type::UInt)
             .body(|body| {
-                body.return_value(|return_value| {
-                    return_value.value_literal(Value::UInt(UIntValue(10)))
+                body.statement(|statement| {
+                    statement.return_value(|return_value| {
+                        return_value.value_literal(Value::UInt(UIntValue(10)))
+                    })
                 })
             });
 
@@ -144,7 +148,7 @@ mod tests {
             .name("my_function")
             .no_parameters()
             .void()
-            .body(|body| body.return_void());
+            .body(|body| body.statement(|statement| statement.return_void()));
 
         let expected = Node::FunctionDeclaration(FunctionDeclaration {
             id: FunctionId("my_function".to_owned()),
@@ -152,9 +156,7 @@ mod tests {
             parameters: Vec::new(),
             return_type: FunctionReturnType::Void,
             body: Ast {
-                nodes: vec![Node::FunctionReturn {
-                    return_value: None,
-                }],
+                nodes: vec![Node::FunctionReturn { return_value: None }],
                 functions: HashMap::new(),
             },
         });

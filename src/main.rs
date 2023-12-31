@@ -38,62 +38,85 @@ fn fibonacci(ast_builder: AstBuilder) -> Ast {
                 ])
                 .void()
                 .body(|body| {
-                    body.var_declaration(|var_declaration| {
-                        var_declaration
-                            .infer_type()
-                            .name("next")
-                            .with_assignment(|value| {
-                                value.operation(|operation| {
-                                    operation.plus(
-                                        |left| left.variable("lower"),
-                                        |right| right.variable("higher"),
-                                    )
+                    body.statement(|statement| {
+                        statement.var_declaration(|var_declaration| {
+                            var_declaration
+                                .infer_type()
+                                .name("next")
+                                .with_assignment(|value| {
+                                    value.operation(|operation| {
+                                        operation.plus(
+                                            |left| left.variable("lower"),
+                                            |right| right.variable("higher"),
+                                        )
+                                    })
                                 })
-                            })
+                        })
                     })
-                    .if_statement(|if_statement| {
-                        if_statement
-                            .check_expression(|check| {
-                                check.operation(|operation| {
-                                    operation.greater_than(
-                                        |left| left.variable("next"),
-                                        |right| right.variable("limit"),
-                                    )
+                    .statement(|statement| {
+                        statement.if_statement(|if_statement| {
+                            if_statement
+                                .check_expression(|check| {
+                                    check.operation(|operation| {
+                                        operation.greater_than(
+                                            |left| left.variable("next"),
+                                            |right| right.variable("limit"),
+                                        )
+                                    })
                                 })
-                            })
-                            .body(|if_body| if_body.return_void().build())
-                            .build()
+                                .body(|if_body| {
+                                    if_body
+                                        .statement(|statement| statement.return_void())
+                                        .build()
+                                })
+                                .build()
+                        })
                     })
-                    .function_call(|function_call| {
-                        function_call
-                            .function_id("print")
-                            .parameter(|param| param.variable("next"))
+                    .statement(|statement| {
+                        statement.function_call(|function_call| {
+                            function_call
+                                .function_id("print")
+                                .parameter(|param| param.variable("next"))
+                                .build()
+                        })
                     })
-                    .function_call(|function_call| {
-                        function_call
-                            .function_id("fibonacci")
-                            .parameter(|param| param.variable("higher"))
-                            .parameter(|param| param.variable("next"))
-                            .parameter(|param| param.variable("limit"))
+                    .statement(|statement| {
+                        statement.function_call(|function_call| {
+                            function_call
+                                .function_id("fibonacci")
+                                .parameter(|param| param.variable("higher"))
+                                .parameter(|param| param.variable("next"))
+                                .parameter(|param| param.variable("limit"))
+                                .build()
+                        })
                     })
                 })
         })
-        .function_call(|function_call| {
-            function_call
-                .function_id("print")
-                .parameter(|param| param.value_literal(Value::UInt(UIntValue(0))))
+        .statement(|statement| {
+            statement.function_call(|function_call| {
+                function_call
+                    .function_id("print")
+                    .parameter(|param| param.value_literal(Value::UInt(UIntValue(0))))
+                    .build()
+            })
         })
-        .function_call(|function_call| {
-            function_call
-                .function_id("print")
-                .parameter(|param| param.value_literal(Value::UInt(UIntValue(1))))
+        .statement(|statement| {
+            statement.function_call(|function_call| {
+                function_call
+                    .function_id("print")
+                    .parameter(|param| param.value_literal(Value::UInt(UIntValue(1))))
+                    .build()
+            })
         })
-        .function_call(|function_call| {
-            function_call
-                .function_id("fibonacci")
-                .parameter(|param| param.value_literal(Value::UInt(UIntValue(0))))
-                .parameter(|param| param.value_literal(Value::UInt(UIntValue(1))))
-                .parameter(|param| param.value_literal(Value::UInt(UIntValue(10000))))
+        .statement(|statement| {
+            statement.function_call(|function_call| {
+                function_call
+                    .function_id("fibonacci")
+                    .parameter(|param| param.value_literal(Value::UInt(UIntValue(0))))
+                    .parameter(|param| param.value_literal(Value::UInt(UIntValue(1))))
+                    .parameter(|param| param.value_literal(Value::UInt(UIntValue(10000))))
+                    .build()
+            })
         })
         .build()
 }

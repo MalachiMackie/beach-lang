@@ -1,5 +1,3 @@
-use std::future::IntoFuture;
-
 use crate::ast::node::{Expression, FunctionCall, Operation, Value};
 
 use super::{function_call_builder::FunctionCallBuilder, operation_builder::OperationBuilder};
@@ -8,7 +6,6 @@ use super::{function_call_builder::FunctionCallBuilder, operation_builder::Opera
 pub struct ExpressionBuilder {}
 
 impl ExpressionBuilder {
-
     pub fn function_call(
         self,
         function_call_fn: impl Fn(FunctionCallBuilder) -> FunctionCall,
@@ -81,11 +78,13 @@ mod tests {
 
     #[test]
     fn operation() {
-        let actual = ExpressionBuilder::default().operation(|operation| operation.not(|not| not.value_literal(Value::Boolean(BoolValue(true)))));
+        let actual = ExpressionBuilder::default().operation(|operation| {
+            operation.not(|not| not.value_literal(Value::Boolean(BoolValue(true))))
+        });
 
         let expected = Expression::Operation(Operation::Unary {
             operation: UnaryOperation::Not,
-            value: Box::new(Expression::ValueLiteral(Value::Boolean(BoolValue(true))))
+            value: Box::new(Expression::ValueLiteral(Value::Boolean(BoolValue(true)))),
         });
 
         assert_eq!(actual, expected);
