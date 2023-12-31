@@ -99,14 +99,16 @@ mod tests {
     #[test]
     fn function_call() {
         let result = AstBuilder::new()
-            .function_declaration()
-            .name("my_function")
-            .no_parameters()
-            .return_type(Type::Boolean)
-            .body(|body| {
-                body.statement().return_value(|expression_builder| {
-                    expression_builder.value_literal(Value::Boolean(BoolValue(true)))
-                })
+            .function_declaration(|function_declaration_builder| {
+                function_declaration_builder
+                    .name("my_function")
+                    .no_parameters()
+                    .return_type(Type::Boolean)
+                    .body(|body| {
+                        body.statement().return_value(|expression_builder| {
+                            expression_builder.value_literal(Value::Boolean(BoolValue(true)))
+                        })
+                    })
             })
             .statement()
             .var_declaration(|var_declaration_builder| {

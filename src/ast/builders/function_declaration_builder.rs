@@ -6,7 +6,6 @@ use super::ast_builder::AstBuilder;
 
 #[derive(Debug, PartialEq)]
 pub struct FunctionDeclarationBuilder {
-    pub(super) builder: AstBuilder,
     pub(super) id: Option<FunctionId>,
     pub(super) name: Option<String>,
     pub(super) parameters: Option<Vec<FunctionParameter>>,
@@ -41,20 +40,17 @@ impl FunctionDeclarationBuilder {
         self
     }
 
-    pub fn body(mut self, builder: impl FnOnce(AstBuilder) -> AstBuilder) -> AstBuilder {
+    pub fn body(mut self, builder: impl FnOnce(AstBuilder) -> AstBuilder) -> Node {
         self.body = Some(builder(AstBuilder::new()).build());
-        self.builder
-            .nodes
-            .push(Node::FunctionDeclaration(FunctionDeclaration {
-                id: self.id.expect("Function id should be set"),
-                name: self.name.expect("function name should be set"),
-                parameters: self.parameters.expect("function parameters should be set"),
-                return_type: self
-                    .return_type
-                    .expect("function return type should be set"),
-                body: self.body.expect("function body should be set"),
-            }));
-        self.builder
+        Node::FunctionDeclaration(FunctionDeclaration {
+            id: self.id.expect("Function id should be set"),
+            name: self.name.expect("function name should be set"),
+            parameters: self.parameters.expect("function parameters should be set"),
+            return_type: self
+                .return_type
+                .expect("function return type should be set"),
+            body: self.body.expect("function body should be set"),
+        })
     }
 }
 
@@ -68,21 +64,22 @@ mod tests {
 
     #[test]
     fn function_declaration() {
-        let result = AstBuilder::new()
-            .function_declaration()
-            .name("my_function")
-            .parameters(vec![(Type::Boolean, "param1".to_owned()).into()])
-            .return_type(Type::UInt)
-            .body(|body: AstBuilder| {
-                body.statement().var_declaration(|var_declaration_builder| {
-                    var_declaration_builder
-                        .declare_type(Type::Boolean)
-                        .name("my_var_name")
-                        .with_assignment(|expression_builder| {
-                            expression_builder.value_literal(Value::Boolean(BoolValue(true)))
-                        })
+        let result = AstBuilder::new().function_declaration(|function_declaration_builder| {
+            function_declaration_builder
+                .name("my_function")
+                .parameters(vec![(Type::Boolean, "param1".to_owned()).into()])
+                .return_type(Type::UInt)
+                .body(|body: AstBuilder| {
+                    body.statement().var_declaration(|var_declaration_builder| {
+                        var_declaration_builder
+                            .declare_type(Type::Boolean)
+                            .name("my_var_name")
+                            .with_assignment(|expression_builder| {
+                                expression_builder.value_literal(Value::Boolean(BoolValue(true)))
+                            })
+                    })
                 })
-            });
+        });
 
         let expected = AstBuilder {
             nodes: vec![Node::FunctionDeclaration(FunctionDeclaration {

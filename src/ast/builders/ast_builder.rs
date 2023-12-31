@@ -20,15 +20,21 @@ impl AstBuilder {
         StatementBuilder { builder: self }
     }
 
-    pub fn function_declaration(self) -> FunctionDeclarationBuilder {
-        FunctionDeclarationBuilder {
+    pub fn function_declaration(
+        mut self,
+        function_declaration_fn: impl Fn(FunctionDeclarationBuilder) -> Node,
+    ) -> AstBuilder {
+        let function_declaration = function_declaration_fn(FunctionDeclarationBuilder {
             id: None,
-            builder: self,
             body: None,
             name: None,
             parameters: None,
             return_type: None,
-        }
+        });
+
+        self.nodes.push(function_declaration);
+
+        self
     }
 
     pub fn build(self) -> Ast {
