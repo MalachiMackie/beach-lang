@@ -69,8 +69,8 @@ mod tests {
                 .name("my_function")
                 .parameters(vec![(Type::Boolean, "param1".to_owned()).into()])
                 .return_type(Type::UInt)
-                .body(|body: AstBuilder| {
-                    body.statement().var_declaration(|var_declaration_builder| {
+                .body(|builder: AstBuilder| {
+                    builder.var_declaration(|var_declaration_builder| {
                         var_declaration_builder
                             .declare_type(Type::Boolean)
                             .name("my_var_name")

@@ -26,21 +26,18 @@ mod tests {
 
     #[test]
     fn add_operation() {
-        let result = AstBuilder::new()
-            .statement()
-            .var_declaration(|var_declaration_builder| {
-                var_declaration_builder
-                    .infer_type()
-                    .name("my_var")
-                    .with_assignment(|expression_builder| {
-                        expression_builder.operation(|operation_builder| {
-                            operation_builder.not(|not_expression_builder| {
-                                not_expression_builder
-                                    .value_literal(Value::Boolean(BoolValue(true)))
-                            })
+        let result = AstBuilder::new().var_declaration(|var_declaration_builder| {
+            var_declaration_builder
+                .infer_type()
+                .name("my_var")
+                .with_assignment(|expression_builder| {
+                    expression_builder.operation(|operation_builder| {
+                        operation_builder.not(|not_expression_builder| {
+                            not_expression_builder.value_literal(Value::Boolean(BoolValue(true)))
                         })
                     })
-            });
+                })
+        });
 
         let expected = AstBuilder {
             nodes: vec![Node::VariableDeclaration {

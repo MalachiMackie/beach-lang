@@ -1,9 +1,12 @@
 use std::collections::HashMap;
 
-use crate::ast::node::{Ast, Function, FunctionId, Node};
+use crate::ast::node::{Ast, Expression, Function, FunctionId, Node};
 
 use super::{
-    function_declaration_builder::FunctionDeclarationBuilder, statement_builder::StatementBuilder,
+    expression_builder::ExpressionBuilder,
+    function_declaration_builder::FunctionDeclarationBuilder,
+    statement_builder::FunctionCallBuilder,
+    variable_declaration_builder::VariableDeclarationBuilder,
 };
 
 #[derive(Debug, PartialEq)]
@@ -16,8 +19,49 @@ impl AstBuilder {
         AstBuilder { nodes: Vec::new() }
     }
 
-    pub fn statement(self) -> StatementBuilder {
-        StatementBuilder { builder: self }
+    pub fn var_declaration(
+        mut self,
+        var_declaration_fn: impl Fn(VariableDeclarationBuilder) -> Node,
+    ) -> AstBuilder {
+        let var_declaration_node = var_declaration_fn(VariableDeclarationBuilder {
+            var_name: None,
+            var_type: None,
+        });
+
+        self.nodes.push(var_declaration_node);
+
+        self
+    }
+
+    pub fn function_call(
+        mut self,
+        function_call_fn: impl Fn(FunctionCallBuilder) -> FunctionCallBuilder,
+    ) -> AstBuilder {
+        let function_call_builder = function_call_fn(FunctionCallBuilder {
+            function_id: None,
+            parameters: None,
+        });
+
+        self.nodes.push(Node::FunctionCall {
+            function_id: function_call_builder
+                .function_id
+                .expect("function id to be set"),
+            parameters: function_call_builder
+                .parameters
+                .expect("parameters to be set"),
+        });
+
+        self
+    }
+
+    pub fn return_value(
+        mut self,
+        expression: impl Fn(ExpressionBuilder) -> Expression,
+    ) -> AstBuilder {
+        self.nodes.push(Node::FunctionReturn {
+            return_value: Some(expression(ExpressionBuilder {})),
+        });
+        self
     }
 
     pub fn function_declaration(

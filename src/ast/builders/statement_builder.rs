@@ -1,60 +1,6 @@
-use crate::ast::node::{Expression, FunctionId, Node};
+use crate::ast::node::{Expression, FunctionId};
 
-use super::{
-    ast_builder::AstBuilder, expression_builder::ExpressionBuilder,
-    variable_declaration_builder::VariableDeclarationBuilder,
-};
-
-pub struct StatementBuilder {
-    pub(super) builder: AstBuilder,
-}
-
-impl StatementBuilder {
-    pub fn var_declaration(
-        mut self,
-        var_declaration_fn: impl Fn(VariableDeclarationBuilder) -> Node,
-    ) -> AstBuilder {
-        let var_declaration_node = var_declaration_fn(VariableDeclarationBuilder {
-            var_name: None,
-            var_type: None,
-        });
-
-        self.builder.nodes.push(var_declaration_node);
-
-        self.builder
-    }
-
-    pub fn function_call(
-        mut self,
-        function_call_fn: impl Fn(FunctionCallBuilder) -> FunctionCallBuilder,
-    ) -> AstBuilder {
-        let function_call_builder = function_call_fn(FunctionCallBuilder {
-            function_id: None,
-            parameters: None,
-        });
-
-        self.builder.nodes.push(Node::FunctionCall {
-            function_id: function_call_builder
-                .function_id
-                .expect("function id to be set"),
-            parameters: function_call_builder
-                .parameters
-                .expect("parameters to be set"),
-        });
-
-        self.builder
-    }
-
-    pub fn return_value(
-        mut self,
-        expression: impl Fn(ExpressionBuilder) -> Expression,
-    ) -> AstBuilder {
-        self.builder.nodes.push(Node::FunctionReturn {
-            return_value: Some(expression(ExpressionBuilder {})),
-        });
-        self.builder
-    }
-}
+use super::expression_builder::ExpressionBuilder;
 
 pub struct FunctionCallBuilder {
     pub function_id: Option<FunctionId>,
@@ -89,9 +35,12 @@ impl FunctionCallBuilder {
 mod tests {
     use std::collections::HashMap;
 
-    use crate::ast::node::{
-        Ast, BoolValue, FunctionDeclaration, FunctionId, FunctionReturnType, Type, Value,
-        VariableDeclarationType,
+    use crate::ast::{
+        builders::ast_builder::AstBuilder,
+        node::{
+            Ast, BoolValue, FunctionDeclaration, FunctionId, FunctionReturnType, Node, Type, Value,
+            VariableDeclarationType,
+        },
     };
 
     use super::*;
@@ -104,13 +53,12 @@ mod tests {
                     .name("my_function")
                     .no_parameters()
                     .return_type(Type::Boolean)
-                    .body(|body| {
-                        body.statement().return_value(|expression_builder| {
+                    .body(|builder| {
+                        builder.return_value(|expression_builder| {
                             expression_builder.value_literal(Value::Boolean(BoolValue(true)))
                         })
                     })
             })
-            .statement()
             .var_declaration(|var_declaration_builder| {
                 var_declaration_builder
                     .infer_type()

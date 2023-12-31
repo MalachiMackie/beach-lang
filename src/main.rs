@@ -17,7 +17,6 @@ fn main() {
                 .return_type(Type::Boolean)
                 .body(|builder| {
                     builder
-                        .statement()
                         .var_declaration(|var_declaration_builder| {
                             var_declaration_builder
                                 .infer_type()
@@ -26,7 +25,6 @@ fn main() {
                                     expression_builder.value_literal(Value::UInt(UIntValue(15)))
                                 })
                         })
-                        .statement()
                         .var_declaration(|variable_declaration_builder| {
                             variable_declaration_builder
                                 .infer_type()
@@ -40,7 +38,6 @@ fn main() {
                                     })
                                 })
                         })
-                        .statement()
                         .var_declaration(|variable_declaration_builder| {
                             variable_declaration_builder
                                 .declare_type(Type::Boolean)
@@ -50,25 +47,21 @@ fn main() {
                                         .value_literal(Value::Boolean(BoolValue(true)))
                                 })
                         })
-                        .statement()
                         .function_call(|function_call_builder| {
                             function_call_builder
                                 .function_id("print")
                                 .parameter(|param_builder| param_builder.variable("my_bool"))
                         })
-                        .statement()
                         .function_call(|function_call_builder| {
                             function_call_builder
                                 .function_id("print")
                                 .parameter(|param_builder| param_builder.variable("my_value"))
                         })
-                        .statement()
                         .function_call(|function_call_builder| {
                             function_call_builder
                                 .function_id("print")
                                 .parameter(|param_builder| param_builder.variable("my_uint"))
                         })
-                        .statement()
                         .return_value(|_| Expression::ValueLiteral(Value::Boolean(BoolValue(true))))
                 })
         })
@@ -78,7 +71,7 @@ fn main() {
                 .no_parameters()
                 .return_type(Type::Boolean)
                 .body(|builder| {
-                    builder.statement().return_value(|expression_builder| {
+                    builder.return_value(|expression_builder| {
                         expression_builder.function_call(|function_call_builder| {
                             function_call_builder.function_id("my_function").parameter(
                                 |expression_builder| {
@@ -89,7 +82,6 @@ fn main() {
                     })
                 })
         })
-        .statement()
         .function_call(|function_call_builder| {
             function_call_builder
                 .function_id("other_function")

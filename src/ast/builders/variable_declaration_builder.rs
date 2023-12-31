@@ -52,16 +52,14 @@ mod tests {
     use super::*;
     #[test]
     pub fn variable_declaration() {
-        let result = AstBuilder::new()
-            .statement()
-            .var_declaration(|var_declaration_builder| {
-                var_declaration_builder
-                    .declare_type(Type::Boolean)
-                    .name("my_var_name")
-                    .with_assignment(|expression_builder| {
-                        expression_builder.value_literal(Value::Boolean(BoolValue(true)))
-                    })
-            });
+        let result = AstBuilder::new().var_declaration(|var_declaration_builder| {
+            var_declaration_builder
+                .declare_type(Type::Boolean)
+                .name("my_var_name")
+                .with_assignment(|expression_builder| {
+                    expression_builder.value_literal(Value::Boolean(BoolValue(true)))
+                })
+        });
 
         let expected = AstBuilder {
             nodes: vec![Node::VariableDeclaration {
@@ -76,16 +74,14 @@ mod tests {
 
     #[test]
     fn variable_declaration_with_assignment() {
-        let result = AstBuilder::new()
-            .statement()
-            .var_declaration(|var_declaration_builder| {
-                var_declaration_builder
-                    .declare_type(Type::Boolean)
-                    .name("my_var_name")
-                    .with_assignment(|expression_builder| {
-                        expression_builder.value_literal(Value::Boolean(BoolValue(true)))
-                    })
-            });
+        let result = AstBuilder::new().var_declaration(|var_declaration_builder| {
+            var_declaration_builder
+                .declare_type(Type::Boolean)
+                .name("my_var_name")
+                .with_assignment(|expression_builder| {
+                    expression_builder.value_literal(Value::Boolean(BoolValue(true)))
+                })
+        });
 
         let expected = AstBuilder {
             nodes: vec![Node::VariableDeclaration {
