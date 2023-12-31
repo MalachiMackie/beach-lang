@@ -37,3 +37,50 @@ fn intrinsic_print(value: &Value) {
         Value::UInt(UIntValue(uint_value)) => println!("{}", uint_value),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use crate::ast::node::{BoolValue, Function, FunctionId, Value, UIntValue};
+
+    use super::{evaluate_intrinsic_function, get_intrinsic_functions};
+
+    #[test]
+    fn test_get_intrinsic_functions() {
+        let functions = get_intrinsic_functions();
+        let keys: Vec<_> = functions.keys().into_iter().collect();
+
+        assert_eq!(keys, vec![&FunctionId("print".to_owned())]);
+    }
+
+    #[test]
+    fn evaluate_print_bool() {
+        let result = evaluate_intrinsic_function(
+            &FunctionId("print".to_owned()),
+            &[("value".to_owned(), Value::Boolean(BoolValue(true)))]
+                .into_iter()
+                .collect(),
+        );
+
+        assert!(matches!(result, None));
+    }
+
+    #[test]
+    fn evaluate_print_uint() {
+        let result = evaluate_intrinsic_function(
+            &FunctionId("print".to_owned()),
+            &[("value".to_owned(), Value::UInt(UIntValue(10)))]
+                .into_iter()
+                .collect(),
+        );
+
+        assert!(matches!(result, None));
+    }
+
+    #[test]
+    #[should_panic]
+    fn evaluate_missing_intrinsic() {
+        evaluate_intrinsic_function(&FunctionId("unknown".to_owned()), &HashMap::new());
+    }
+}
