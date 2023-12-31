@@ -1,5 +1,5 @@
 use crate::ast::node::{
-    Ast, FunctionDeclaration, FunctionId, FunctionParameter, FunctionReturnType, Node, Type,
+    FunctionDeclaration, FunctionId, FunctionParameter, FunctionReturnType, Node, Type,
 };
 
 use super::ast_builder::AstBuilder;
@@ -10,7 +10,8 @@ pub struct FunctionDeclarationBuilder {
     pub(super) name: Option<String>,
     pub(super) parameters: Option<Vec<FunctionParameter>>,
     pub(super) return_type: Option<FunctionReturnType>,
-    pub(super) body: Option<Ast>,
+    pub(super) body: Option<Vec<Node>>,
+    // todo: local functions
 }
 
 impl FunctionDeclarationBuilder {
@@ -51,7 +52,7 @@ impl FunctionDeclarationBuilder {
     }
 
     pub fn body(mut self, builder: impl FnOnce(AstBuilder) -> AstBuilder) -> FunctionDeclaration {
-        self.body = Some(builder(AstBuilder::default()).build());
+        self.body = Some(builder(AstBuilder::default()).build().nodes);
         FunctionDeclaration {
             id: self.id.expect("Function id should be set"),
             name: self.name.expect("function name should be set"),
@@ -66,8 +67,6 @@ impl FunctionDeclarationBuilder {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
     use crate::ast::node::{BoolValue, Expression, UIntValue, Value, VariableDeclarationType};
 
     use super::*;
@@ -99,14 +98,11 @@ mod tests {
                 param_name: "param1".to_owned(),
             }],
             return_type: FunctionReturnType::Type(Type::UInt),
-            body: Ast {
-                nodes: vec![Node::VariableDeclaration {
-                    var_type: VariableDeclarationType::Type(Type::Boolean),
-                    var_name: "my_var_name".to_owned(),
-                    value: Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
-                }],
-                functions: HashMap::new(),
-            },
+            body: vec![Node::VariableDeclaration {
+                var_type: VariableDeclarationType::Type(Type::Boolean),
+                var_name: "my_var_name".to_owned(),
+                value: Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
+            }],
         };
 
         assert_eq!(result, expected);
@@ -131,12 +127,9 @@ mod tests {
             name: "my_function".to_owned(),
             parameters: Vec::new(),
             return_type: FunctionReturnType::Type(Type::UInt),
-            body: Ast {
-                nodes: vec![Node::FunctionReturn {
-                    return_value: Some(Expression::ValueLiteral(Value::UInt(UIntValue(10)))),
-                }],
-                functions: HashMap::new(),
-            },
+            body: vec![Node::FunctionReturn {
+                return_value: Some(Expression::ValueLiteral(Value::UInt(UIntValue(10)))),
+            }],
         };
 
         assert_eq!(actual, expected);
@@ -155,10 +148,7 @@ mod tests {
             name: "my_function".to_owned(),
             parameters: Vec::new(),
             return_type: FunctionReturnType::Void,
-            body: Ast {
-                nodes: vec![Node::FunctionReturn { return_value: None }],
-                functions: HashMap::new(),
-            },
+            body: vec![Node::FunctionReturn { return_value: None }],
         };
 
         assert_eq!(actual, expected);

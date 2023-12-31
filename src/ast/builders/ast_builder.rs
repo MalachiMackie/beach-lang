@@ -103,7 +103,7 @@ mod tests {
                     name: "my_function".to_owned(),
                     parameters: Vec::new(),
                     return_type: FunctionReturnType::Void,
-                    body: AstBuilder::default().build(),
+                    body: Vec::new(),
                 },
             )]),
             nodes: Vec::new(),

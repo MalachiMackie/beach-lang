@@ -34,7 +34,7 @@ pub struct FunctionDeclaration {
     pub name: String,
     pub parameters: Vec<FunctionParameter>,
     pub return_type: FunctionReturnType,
-    pub body: Ast,
+    pub body: Vec<Node>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -141,7 +141,7 @@ pub enum Function {
         name: String,
         parameters: Vec<FunctionParameter>,
         return_type: FunctionReturnType,
-        body: Ast,
+        body: Vec<Node>,
     },
     Intrinsic {
         id: FunctionId,
@@ -176,5 +176,59 @@ impl Function {
             Function::CustomFunction { return_type, .. }
             | Function::Intrinsic { return_type, .. } => return_type,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Function, FunctionId, FunctionParameter, FunctionReturnType, Node, Type};
+
+    #[test]
+    fn custom_function_getters() {
+        let function = Function::CustomFunction {
+            id: FunctionId("my_function".to_owned()),
+            name: "my_function".to_owned(),
+            parameters: vec![FunctionParameter::FunctionParameter {
+                param_type: Type::Boolean,
+                param_name: "my_param".to_owned(),
+            }],
+            return_type: FunctionReturnType::Void,
+            body: vec![Node::FunctionReturn { return_value: None }],
+        };
+
+        assert_eq!(function.id(), &FunctionId("my_function".to_owned()));
+        assert_eq!(function.name(), "my_function");
+        assert_eq!(
+            function.parameters(),
+            &[FunctionParameter::FunctionParameter {
+                param_type: Type::Boolean,
+                param_name: "my_param".to_owned()
+            }]
+        );
+        assert_eq!(function.return_type(), &FunctionReturnType::Void);
+    }
+
+    #[test]
+    fn intrinsic_function_getters() {
+        let function = Function::Intrinsic {
+            id: FunctionId("my_function".to_owned()),
+            name: "my_function".to_owned(),
+            parameters: vec![FunctionParameter::FunctionParameter {
+                param_type: Type::Boolean,
+                param_name: "my_param".to_owned(),
+            }],
+            return_type: FunctionReturnType::Void,
+        };
+
+        assert_eq!(function.id(), &FunctionId("my_function".to_owned()));
+        assert_eq!(function.name(), "my_function");
+        assert_eq!(
+            function.parameters(),
+            &[FunctionParameter::FunctionParameter {
+                param_type: Type::Boolean,
+                param_name: "my_param".to_owned()
+            }]
+        );
+        assert_eq!(function.return_type(), &FunctionReturnType::Void);
     }
 }
