@@ -2,6 +2,7 @@ use crate::ast::node::{BinaryOperation, Expression, Operation, UnaryOperation};
 
 use super::expression_builder::ExpressionBuilder;
 
+#[derive(Default)]
 pub struct OperationBuilder {}
 
 impl OperationBuilder {
@@ -42,37 +43,52 @@ impl OperationBuilder {
 
 #[cfg(test)]
 mod tests {
-    use crate::ast::{
-        builders::ast_builder::AstBuilder,
-        node::{BoolValue, Node, Value, VariableDeclarationType},
-    };
+    use crate::ast::node::{BoolValue, UIntValue, Value};
 
     use super::*;
 
     #[test]
-    fn add_operation() {
-        let result = AstBuilder::new().var_declaration(|var_declaration_builder| {
-            var_declaration_builder
-                .infer_type()
-                .name("my_var")
-                .with_assignment(|expression_builder| {
-                    expression_builder.operation(|operation_builder| {
-                        operation_builder.not(|not_expression_builder| {
-                            not_expression_builder.value_literal(Value::Boolean(BoolValue(true)))
-                        })
-                    })
-                })
+
+    fn not_operation() {
+        let result = OperationBuilder::default().not(|not_expression_builder| {
+            not_expression_builder.value_literal(Value::Boolean(BoolValue(true)))
         });
 
-        let expected = AstBuilder {
-            nodes: vec![Node::VariableDeclaration {
-                var_type: VariableDeclarationType::Infer,
-                var_name: "my_var".to_owned(),
-                value: Expression::Operation(Operation::Unary {
-                    operation: UnaryOperation::Not,
-                    value: Box::new(Expression::ValueLiteral(Value::Boolean(BoolValue(true)))),
-                }),
-            }],
+        let expected = Operation::Unary {
+            operation: UnaryOperation::Not,
+            value: Box::new(Expression::ValueLiteral(Value::Boolean(BoolValue(true)))),
+        };
+
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn greater_than_operation() {
+        let result = OperationBuilder::default().greater_than(
+            |left| left.value_literal(Value::UInt(UIntValue(10))),
+            |right| right.value_literal(Value::UInt(UIntValue(12))),
+        );
+
+        let expected = Operation::Binary {
+            operation: BinaryOperation::GreaterThan,
+            left: Box::new(Expression::ValueLiteral(Value::UInt(UIntValue(10)))),
+            right: Box::new(Expression::ValueLiteral(Value::UInt(UIntValue(12)))),
+        };
+
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn plus_than_operation() {
+        let result = OperationBuilder::default().plus(
+            |left| left.value_literal(Value::UInt(UIntValue(10))),
+            |right| right.value_literal(Value::UInt(UIntValue(12))),
+        );
+
+        let expected = Operation::Binary {
+            operation: BinaryOperation::Plus,
+            left: Box::new(Expression::ValueLiteral(Value::UInt(UIntValue(10)))),
+            right: Box::new(Expression::ValueLiteral(Value::UInt(UIntValue(12)))),
         };
 
         assert_eq!(result, expected);

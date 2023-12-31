@@ -70,9 +70,15 @@ impl From<(Type, String)> for FunctionParameter {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expression {
     ValueLiteral(Value),
-    FunctionCall(FunctionId, Vec<Expression>),
+    FunctionCall(FunctionCall),
     Operation(Operation),
     VariableAccess(String),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct FunctionCall {
+    pub function_id: FunctionId,
+    pub parameters: Vec<Expression>,
 }
 
 #[derive(Debug, PartialEq, Hash, Clone, Eq)]

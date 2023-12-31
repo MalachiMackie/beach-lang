@@ -2,6 +2,7 @@ use crate::ast::node::{Expression, Node, Type, VariableDeclarationType};
 
 use super::expression_builder::ExpressionBuilder;
 
+#[derive(Default)]
 pub struct VariableDeclarationBuilder {
     pub(super) var_name: Option<String>,
     pub(super) var_type: Option<VariableDeclarationType>,
@@ -45,52 +46,43 @@ impl VariableDeclarationBuilder {
 #[cfg(test)]
 mod tests {
     use crate::ast::{
-        builders::ast_builder::AstBuilder,
         node::{BoolValue, Value},
     };
 
     use super::*;
     #[test]
     pub fn variable_declaration() {
-        let result = AstBuilder::new().var_declaration(|var_declaration_builder| {
-            var_declaration_builder
-                .declare_type(Type::Boolean)
-                .name("my_var_name")
-                .with_assignment(|expression_builder| {
-                    expression_builder.value_literal(Value::Boolean(BoolValue(true)))
-                })
-        });
+        let result = VariableDeclarationBuilder::default()
+            .declare_type(Type::Boolean)
+            .name("my_var_name")
+            .with_assignment(|expression_builder| {
+                expression_builder.value_literal(Value::Boolean(BoolValue(true)))
+            });
 
-        let expected = AstBuilder {
-            nodes: vec![Node::VariableDeclaration {
-                var_type: VariableDeclarationType::Type(Type::Boolean),
-                var_name: "my_var_name".to_owned(),
-                value: Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
-            }],
+        let expected = Node::VariableDeclaration {
+            var_type: VariableDeclarationType::Type(Type::Boolean),
+            var_name: "my_var_name".to_owned(),
+            value: Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
         };
 
         assert_eq!(result, expected);
     }
 
     #[test]
-    fn variable_declaration_with_assignment() {
-        let result = AstBuilder::new().var_declaration(|var_declaration_builder| {
-            var_declaration_builder
-                .declare_type(Type::Boolean)
-                .name("my_var_name")
-                .with_assignment(|expression_builder| {
-                    expression_builder.value_literal(Value::Boolean(BoolValue(true)))
-                })
-        });
+    fn variable_declaration_infer_type() {
+        let result = VariableDeclarationBuilder::default()
+            .infer_type()
+            .name("my_var_name")
+            .with_assignment(|expression_builder| {
+                expression_builder.value_literal(Value::Boolean(BoolValue(true)))
+            });
 
-        let expected = AstBuilder {
-            nodes: vec![Node::VariableDeclaration {
-                var_type: VariableDeclarationType::Type(Type::Boolean),
-                var_name: "my_var_name".to_owned(),
-                value: Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
-            }],
+        let expected = Node::VariableDeclaration {
+            var_type: VariableDeclarationType::Infer,
+            var_name: "my_var_name".to_owned(),
+            value: Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
         };
 
-        assert_eq!(result, expected)
+        assert_eq!(result, expected);
     }
 }

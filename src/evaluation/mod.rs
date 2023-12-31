@@ -154,14 +154,14 @@ impl Expression {
     ) -> Value {
         match self {
             Expression::ValueLiteral(value) => value.clone(),
-            Expression::FunctionCall(function_id, parameters) => {
-                let function = &functions[function_id];
+            Expression::FunctionCall(function_call) => {
+                let function = &functions[&function_call.function_id];
                 if matches!(function.return_type(), FunctionReturnType::Void) {
                     panic!("Function expected to be value, but is void");
                 };
 
                 function
-                    .evaluate(parameters.clone(), local_variables, functions)
+                    .evaluate(function_call.parameters.clone(), local_variables, functions)
                     .expect("function has a non void return type")
             }
             Expression::Operation(operation) => operation.evaluate(functions, local_variables),

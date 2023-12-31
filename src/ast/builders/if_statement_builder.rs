@@ -73,3 +73,110 @@ impl IfStatementBuilder {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::ast::{
+        builders::if_statement_builder::IfStatementBuilder,
+        node::{BoolValue, ElseIfBlock, Expression, FunctionId, IfStatement, Node, Value},
+    };
+
+    #[test]
+    fn if_statement() {
+        let actual = IfStatementBuilder::new()
+            .check_expression(|check| check.value_literal(Value::Boolean(BoolValue(true))))
+            .body(|body| {
+                body.function_call(|function_call| {
+                    function_call.function_id("my_function").no_parameters()
+                })
+                .build()
+            })
+            .build();
+
+        let expected = Node::IfStatement(IfStatement {
+            check_expression: Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
+            if_block: vec![Node::FunctionCall {
+                function_id: FunctionId("my_function".to_owned()),
+                parameters: Vec::new(),
+            }],
+            else_block: None,
+            else_if_blocks: Vec::new(),
+        });
+
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn else_if_statement() {
+        let actual = IfStatementBuilder::new()
+            .check_expression(|check| check.value_literal(Value::Boolean(BoolValue(true))))
+            .body(|body| {
+                body.function_call(|function_call| {
+                    function_call.function_id("my_function").no_parameters()
+                })
+                .build()
+            })
+            .else_if(
+                |check| check.value_literal(Value::Boolean(BoolValue(true))),
+                |body| {
+                    body.function_call(|function_call| {
+                        function_call.function_id("my_function").no_parameters()
+                    })
+                    .build()
+                },
+            )
+            .build();
+
+        let expected = Node::IfStatement(IfStatement {
+            check_expression: Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
+            if_block: vec![Node::FunctionCall {
+                function_id: FunctionId("my_function".to_owned()),
+                parameters: Vec::new(),
+            }],
+            else_block: None,
+            else_if_blocks: vec![ElseIfBlock {
+                check: Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
+                block: vec![Node::FunctionCall {
+                    function_id: FunctionId("my_function".to_owned()),
+                    parameters: Vec::new(),
+                }],
+            }],
+        });
+
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn else_statement() {
+        let actual = IfStatementBuilder::new()
+            .check_expression(|check| check.value_literal(Value::Boolean(BoolValue(true))))
+            .body(|body| {
+                body.function_call(|function_call| {
+                    function_call.function_id("my_function").no_parameters()
+                })
+                .build()
+            })
+            .else_block(|body| {
+                body.function_call(|function_call| {
+                    function_call.function_id("my_function").no_parameters()
+                })
+                .build()
+            })
+            .build();
+
+        let expected = Node::IfStatement(IfStatement {
+            check_expression: Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
+            if_block: vec![Node::FunctionCall {
+                function_id: FunctionId("my_function".to_owned()),
+                parameters: Vec::new(),
+            }],
+            else_block: Some(vec![Node::FunctionCall {
+                function_id: FunctionId("my_function".to_owned()),
+                parameters: Vec::new(),
+            }]),
+            else_if_blocks: Vec::new(),
+        });
+
+        assert_eq!(actual, expected);
+    }
+}

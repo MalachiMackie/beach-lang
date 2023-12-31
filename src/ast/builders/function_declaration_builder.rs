@@ -14,6 +14,16 @@ pub struct FunctionDeclarationBuilder {
 }
 
 impl FunctionDeclarationBuilder {
+    pub fn new() -> Self {
+        Self {
+            id: None,
+            name: None,
+            parameters: None,
+            return_type: None,
+            body: None,
+        }
+    }
+
     pub fn name(mut self, name: &str) -> Self {
         self.id = Some(FunctionId(name.to_owned()));
         self.name = Some(name.to_owned());
@@ -58,49 +68,97 @@ impl FunctionDeclarationBuilder {
 mod tests {
     use std::collections::HashMap;
 
-    use crate::ast::node::{BoolValue, Expression, Value, VariableDeclarationType};
+    use crate::ast::node::{BoolValue, Expression, UIntValue, Value, VariableDeclarationType};
 
     use super::*;
 
     #[test]
-    fn function_declaration() {
-        let result = AstBuilder::new().function_declaration(|function_declaration_builder| {
-            function_declaration_builder
-                .name("my_function")
-                .parameters(vec![(Type::Boolean, "param1".to_owned()).into()])
-                .return_type(Type::UInt)
-                .body(|builder: AstBuilder| {
-                    builder.var_declaration(|var_declaration_builder| {
-                        var_declaration_builder
-                            .declare_type(Type::Boolean)
-                            .name("my_var_name")
-                            .with_assignment(|expression_builder| {
-                                expression_builder.value_literal(Value::Boolean(BoolValue(true)))
-                            })
-                    })
+    fn function_declaration_parameters() {
+        let result = FunctionDeclarationBuilder::new()
+            .name("my_function")
+            .parameters(vec![(Type::Boolean, "param1".to_owned()).into()])
+            .return_type(Type::UInt)
+            .body(|builder: AstBuilder| {
+                builder.var_declaration(|var_declaration_builder| {
+                    var_declaration_builder
+                        .declare_type(Type::Boolean)
+                        .name("my_var_name")
+                        .with_assignment(|expression_builder| {
+                            expression_builder.value_literal(Value::Boolean(BoolValue(true)))
+                        })
                 })
+            });
+
+        let expected = Node::FunctionDeclaration(FunctionDeclaration {
+            id: FunctionId("my_function".to_owned()),
+            name: "my_function".to_owned(),
+            parameters: vec![FunctionParameter::FunctionParameter {
+                param_type: Type::Boolean,
+                param_name: "param1".to_owned(),
+            }],
+            return_type: FunctionReturnType::Type(Type::UInt),
+            body: Ast {
+                nodes: vec![Node::VariableDeclaration {
+                    var_type: VariableDeclarationType::Type(Type::Boolean),
+                    var_name: "my_var_name".to_owned(),
+                    value: Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
+                }],
+                functions: HashMap::new(),
+            },
         });
 
-        let expected = AstBuilder {
-            nodes: vec![Node::FunctionDeclaration(FunctionDeclaration {
-                id: FunctionId("my_function".to_owned()),
-                name: "my_function".to_owned(),
-                parameters: vec![FunctionParameter::FunctionParameter {
-                    param_type: Type::Boolean,
-                    param_name: "param1".to_owned(),
-                }],
-                return_type: FunctionReturnType::Type(Type::UInt),
-                body: Ast {
-                    nodes: vec![Node::VariableDeclaration {
-                        var_type: VariableDeclarationType::Type(Type::Boolean),
-                        var_name: "my_var_name".to_owned(),
-                        value: Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
-                    }],
-                    functions: HashMap::new(),
-                },
-            })],
-        };
-
         assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn function_declaration_no_parameters() {
+        let actual = FunctionDeclarationBuilder::new()
+            .name("my_function")
+            .no_parameters()
+            .return_type(Type::UInt)
+            .body(|body| {
+                body.return_value(|return_value| {
+                    return_value.value_literal(Value::UInt(UIntValue(10)))
+                })
+            });
+
+        let expected = Node::FunctionDeclaration(FunctionDeclaration {
+            id: FunctionId("my_function".to_owned()),
+            name: "my_function".to_owned(),
+            parameters: Vec::new(),
+            return_type: FunctionReturnType::Type(Type::UInt),
+            body: Ast {
+                nodes: vec![Node::FunctionReturn {
+                    return_value: Some(Expression::ValueLiteral(Value::UInt(UIntValue(10)))),
+                }],
+                functions: HashMap::new(),
+            },
+        });
+
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn function_declaration_void() {
+        let actual = FunctionDeclarationBuilder::new()
+            .name("my_function")
+            .no_parameters()
+            .void()
+            .body(|body| body.return_void());
+
+        let expected = Node::FunctionDeclaration(FunctionDeclaration {
+            id: FunctionId("my_function".to_owned()),
+            name: "my_function".to_owned(),
+            parameters: Vec::new(),
+            return_type: FunctionReturnType::Void,
+            body: Ast {
+                nodes: vec![Node::FunctionReturn {
+                    return_value: None,
+                }],
+                functions: HashMap::new(),
+            },
+        });
+
+        assert_eq!(actual, expected);
     }
 }
