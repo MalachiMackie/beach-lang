@@ -1,14 +1,12 @@
 use std::collections::HashMap;
 
 use crate::ast::node::{
-    BoolValue, Expression, Function, FunctionId, FunctionParameter, FunctionReturnType, UIntValue,
-    Value,
+    BoolValue, Function, FunctionId, FunctionParameter, FunctionReturnType, UIntValue, Value,
 };
 
 pub(super) fn evaluate_intrinsic_function(
     id: &FunctionId,
     parameters: &HashMap<String, Value>,
-    functions: &HashMap<FunctionId, Function>,
 ) -> Option<Value> {
     match id.0.as_str() {
         "print" => {

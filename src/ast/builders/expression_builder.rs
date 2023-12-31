@@ -1,4 +1,4 @@
-use crate::ast::node::{Expression, Function, FunctionId, Operation, Value};
+use crate::ast::node::{Expression, Operation, Value};
 
 use super::{operation_builder::OperationBuilder, statement_builder::FunctionCallBuilder};
 

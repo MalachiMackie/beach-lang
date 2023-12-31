@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::ast::node::{Ast, Function, FunctionDeclaration, FunctionId, Node};
+use crate::ast::node::{Ast, Function, FunctionId, Node};
 
 use super::{
     function_declaration_builder::FunctionDeclarationBuilder, statement_builder::StatementBuilder,

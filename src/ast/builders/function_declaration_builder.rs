@@ -74,13 +74,14 @@ mod tests {
             .parameters(vec![(Type::Boolean, "param1".to_owned()).into()])
             .return_type(Type::UInt)
             .body(|body: AstBuilder| {
-                body.statement()
-                    .var_declaration()
-                    .declare_type(Type::Boolean)
-                    .name("my_var_name")
-                    .with_assignment(|expression_builder| {
-                        expression_builder.value_literal(Value::Boolean(BoolValue(true)))
-                    })
+                body.statement().var_declaration(|var_declaration_builder| {
+                    var_declaration_builder
+                        .declare_type(Type::Boolean)
+                        .name("my_var_name")
+                        .with_assignment(|expression_builder| {
+                            expression_builder.value_literal(Value::Boolean(BoolValue(true)))
+                        })
+                })
             });
 
         let expected = AstBuilder {

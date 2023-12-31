@@ -4,8 +4,8 @@ use core::panic;
 use std::collections::HashMap;
 
 use crate::ast::node::{
-    Ast, BoolValue, Expression, Function, FunctionDeclaration, FunctionId, FunctionParameter,
-    FunctionReturnType, Node, Operation, UnaryOperation, Value,
+    Ast, BoolValue, Expression, Function, FunctionId, FunctionParameter, FunctionReturnType, Node,
+    Operation, UnaryOperation, Value,
 };
 
 use self::intrinsics::evaluate_intrinsic_function;
@@ -101,7 +101,6 @@ impl Expression {
 
 fn evaluate_custom_function(
     body: &Ast,
-    function_name: &str,
     parameters: HashMap<String, Value>,
     functions: &Functions,
 ) -> Option<Value> {
@@ -142,12 +141,10 @@ impl Function {
             .collect();
 
         match self {
-            Function::CustomFunction { name, body, .. } => {
-                evaluate_custom_function(body, &name, local_variables, functions)
+            Function::CustomFunction { body, .. } => {
+                evaluate_custom_function(body, local_variables, functions)
             }
-            Function::Intrinsic { id, .. } => {
-                evaluate_intrinsic_function(id, &local_variables, functions)
-            }
+            Function::Intrinsic { id, .. } => evaluate_intrinsic_function(id, &local_variables),
         }
     }
 }

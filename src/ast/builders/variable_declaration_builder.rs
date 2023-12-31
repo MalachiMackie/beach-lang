@@ -1,12 +1,8 @@
 use crate::ast::node::{Expression, Node, Type, VariableDeclarationType};
 
-use super::{
-    ast_builder::AstBuilder, expression_builder::ExpressionBuilder,
-    statement_builder::StatementBuilder,
-};
+use super::expression_builder::ExpressionBuilder;
 
 pub struct VariableDeclarationBuilder {
-    pub(super) builder: StatementBuilder,
     pub(super) var_name: Option<String>,
     pub(super) var_type: Option<VariableDeclarationType>,
 }
@@ -28,9 +24,9 @@ impl VariableDeclarationBuilder {
     }
 
     pub fn with_assignment<TExpressionFn: Fn(ExpressionBuilder) -> Expression>(
-        mut self,
+        self,
         value_fn: TExpressionFn,
-    ) -> AstBuilder {
+    ) -> Node {
         let var_name = self.var_name.expect(
             "variable declaration name is None, builder should not be able to get to this point",
         );
@@ -38,33 +34,33 @@ impl VariableDeclarationBuilder {
             "Variable declaration type is None, builder should not be able to get to this point",
         );
 
-        self.builder
-            .builder
-            .nodes
-            .extend([Node::VariableDeclaration {
-                var_name: var_name,
-                var_type: var_type,
-                value: value_fn(ExpressionBuilder {}),
-            }]);
-
-        self.builder.builder
+        Node::VariableDeclaration {
+            var_type,
+            var_name,
+            value: value_fn(ExpressionBuilder {}),
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::ast::node::{BoolValue, Value};
+    use crate::ast::{
+        builders::ast_builder::AstBuilder,
+        node::{BoolValue, Value},
+    };
 
     use super::*;
     #[test]
     pub fn variable_declaration() {
         let result = AstBuilder::new()
             .statement()
-            .var_declaration()
-            .declare_type(Type::Boolean)
-            .name("my_var_name")
-            .with_assignment(|expression_builder| {
-                expression_builder.value_literal(Value::Boolean(BoolValue(true)))
+            .var_declaration(|var_declaration_builder| {
+                var_declaration_builder
+                    .declare_type(Type::Boolean)
+                    .name("my_var_name")
+                    .with_assignment(|expression_builder| {
+                        expression_builder.value_literal(Value::Boolean(BoolValue(true)))
+                    })
             });
 
         let expected = AstBuilder {
@@ -82,11 +78,13 @@ mod tests {
     fn variable_declaration_with_assignment() {
         let result = AstBuilder::new()
             .statement()
-            .var_declaration()
-            .declare_type(Type::Boolean)
-            .name("my_var_name")
-            .with_assignment(|expression_builder| {
-                expression_builder.value_literal(Value::Boolean(BoolValue(true)))
+            .var_declaration(|var_declaration_builder| {
+                var_declaration_builder
+                    .declare_type(Type::Boolean)
+                    .name("my_var_name")
+                    .with_assignment(|expression_builder| {
+                        expression_builder.value_literal(Value::Boolean(BoolValue(true)))
+                    })
             });
 
         let expected = AstBuilder {

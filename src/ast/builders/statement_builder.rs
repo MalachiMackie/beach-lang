@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::ast::node::{Expression, FunctionId, Node};
 
 use super::{
@@ -12,12 +10,18 @@ pub struct StatementBuilder {
 }
 
 impl StatementBuilder {
-    pub fn var_declaration(self) -> VariableDeclarationBuilder {
-        VariableDeclarationBuilder {
-            builder: self,
+    pub fn var_declaration(
+        mut self,
+        var_declaration_fn: impl Fn(VariableDeclarationBuilder) -> Node,
+    ) -> AstBuilder {
+        let var_declaration_node = var_declaration_fn(VariableDeclarationBuilder {
             var_name: None,
             var_type: None,
-        }
+        });
+
+        self.builder.nodes.push(var_declaration_node);
+
+        self.builder
     }
 
     pub fn function_call(
@@ -105,12 +109,15 @@ mod tests {
                 })
             })
             .statement()
-            .var_declaration()
-            .infer_type()
-            .name("my_var")
-            .with_assignment(|expression_builder| {
-                expression_builder
-                    .function_call(|builder| builder.function_id("my_function").no_parameters())
+            .var_declaration(|var_declaration_builder| {
+                var_declaration_builder
+                    .infer_type()
+                    .name("my_var")
+                    .with_assignment(|expression_builder| {
+                        expression_builder.function_call(|builder| {
+                            builder.function_id("my_function").no_parameters()
+                        })
+                    })
             });
 
         let expected = AstBuilder {

@@ -17,29 +17,36 @@ fn main() {
         .body(|builder| {
             builder
                 .statement()
-                .var_declaration()
-                .infer_type()
-                .name("my_uint")
-                .with_assignment(|expression_builder| {
-                    expression_builder.value_literal(Value::UInt(UIntValue(15)))
+                .var_declaration(|var_declaration_builder| {
+                    var_declaration_builder
+                        .infer_type()
+                        .name("my_uint")
+                        .with_assignment(|expression_builder| {
+                            expression_builder.value_literal(Value::UInt(UIntValue(15)))
+                        })
                 })
                 .statement()
-                .var_declaration()
-                .infer_type()
-                .name("my_value")
-                .with_assignment(|expression_builder| {
-                    expression_builder.operation(|operation_builder| {
-                        operation_builder.not(|expression_builder| {
+                .var_declaration(|variable_declaration_builder| {
+                    variable_declaration_builder
+                        .infer_type()
+                        .name("my_value")
+                        .with_assignment(|expression_builder| {
+                            expression_builder.operation(|operation_builder| {
+                                operation_builder.not(|expression_builder| {
+                                    expression_builder
+                                        .value_literal(Value::Boolean(BoolValue(true)))
+                                })
+                            })
+                        })
+                })
+                .statement()
+                .var_declaration(|variable_declaration_builder| {
+                    variable_declaration_builder
+                        .declare_type(Type::Boolean)
+                        .name("my_bool")
+                        .with_assignment(|expression_builder| {
                             expression_builder.value_literal(Value::Boolean(BoolValue(true)))
                         })
-                    })
-                })
-                .statement()
-                .var_declaration()
-                .declare_type(Type::Boolean)
-                .name("my_bool")
-                .with_assignment(|expression_builder| {
-                    expression_builder.value_literal(Value::Boolean(BoolValue(true)))
                 })
                 .statement()
                 .function_call(|function_call_builder| {
