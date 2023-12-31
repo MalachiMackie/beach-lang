@@ -10,7 +10,6 @@ pub enum Node {
     FunctionReturn {
         return_value: Option<Expression>,
     },
-    FunctionDeclaration(FunctionDeclaration),
     FunctionCall(FunctionCall),
     IfStatement(IfStatement),
 }

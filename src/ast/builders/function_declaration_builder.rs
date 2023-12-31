@@ -50,9 +50,9 @@ impl FunctionDeclarationBuilder {
         self
     }
 
-    pub fn body(mut self, builder: impl FnOnce(AstBuilder) -> AstBuilder) -> Node {
-        self.body = Some(builder(AstBuilder::new()).build());
-        Node::FunctionDeclaration(FunctionDeclaration {
+    pub fn body(mut self, builder: impl FnOnce(AstBuilder) -> AstBuilder) -> FunctionDeclaration {
+        self.body = Some(builder(AstBuilder::default()).build());
+        FunctionDeclaration {
             id: self.id.expect("Function id should be set"),
             name: self.name.expect("function name should be set"),
             parameters: self.parameters.expect("function parameters should be set"),
@@ -60,7 +60,7 @@ impl FunctionDeclarationBuilder {
                 .return_type
                 .expect("function return type should be set"),
             body: self.body.expect("function body should be set"),
-        })
+        }
     }
 }
 
@@ -91,7 +91,7 @@ mod tests {
                 })
             });
 
-        let expected = Node::FunctionDeclaration(FunctionDeclaration {
+        let expected = FunctionDeclaration {
             id: FunctionId("my_function".to_owned()),
             name: "my_function".to_owned(),
             parameters: vec![FunctionParameter::FunctionParameter {
@@ -107,7 +107,7 @@ mod tests {
                 }],
                 functions: HashMap::new(),
             },
-        });
+        };
 
         assert_eq!(result, expected);
     }
@@ -126,7 +126,7 @@ mod tests {
                 })
             });
 
-        let expected = Node::FunctionDeclaration(FunctionDeclaration {
+        let expected = FunctionDeclaration {
             id: FunctionId("my_function".to_owned()),
             name: "my_function".to_owned(),
             parameters: Vec::new(),
@@ -137,7 +137,7 @@ mod tests {
                 }],
                 functions: HashMap::new(),
             },
-        });
+        };
 
         assert_eq!(actual, expected);
     }
@@ -150,7 +150,7 @@ mod tests {
             .void()
             .body(|body| body.statement(|statement| statement.return_void()));
 
-        let expected = Node::FunctionDeclaration(FunctionDeclaration {
+        let expected = FunctionDeclaration {
             id: FunctionId("my_function".to_owned()),
             name: "my_function".to_owned(),
             parameters: Vec::new(),
@@ -159,7 +159,7 @@ mod tests {
                 nodes: vec![Node::FunctionReturn { return_value: None }],
                 functions: HashMap::new(),
             },
-        });
+        };
 
         assert_eq!(actual, expected);
     }

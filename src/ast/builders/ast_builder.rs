@@ -1,21 +1,18 @@
 use std::collections::HashMap;
 
-use crate::ast::node::{Ast, Function, FunctionId, Node};
+use crate::ast::node::{Ast, Function, FunctionDeclaration, FunctionId, Node};
 
 use super::{
     function_declaration_builder::FunctionDeclarationBuilder, statement_builder::StatementBuilder,
 };
 
-#[derive(Debug, PartialEq)]
+#[derive(Default, Debug, PartialEq)]
 pub struct AstBuilder {
+    pub(super) functions: Vec<FunctionDeclaration>,
     pub(super) nodes: Vec<Node>,
 }
 
 impl AstBuilder {
-    pub fn new() -> Self {
-        AstBuilder { nodes: Vec::new() }
-    }
-
     pub fn statement(mut self, statement_fn: impl Fn(StatementBuilder) -> Node) -> Self {
         self.nodes.push(statement_fn(StatementBuilder::default()));
         self
@@ -23,7 +20,7 @@ impl AstBuilder {
 
     pub fn function_declaration(
         mut self,
-        function_declaration_fn: impl Fn(FunctionDeclarationBuilder) -> Node,
+        function_declaration_fn: impl Fn(FunctionDeclarationBuilder) -> FunctionDeclaration,
     ) -> AstBuilder {
         let function_declaration = function_declaration_fn(FunctionDeclarationBuilder {
             id: None,
@@ -33,31 +30,27 @@ impl AstBuilder {
             return_type: None,
         });
 
-        self.nodes.push(function_declaration);
+        self.functions.push(function_declaration);
 
         self
     }
 
     pub fn build(self) -> Ast {
         let functions: HashMap<FunctionId, Function> = self
-            .nodes
+            .functions
             .iter()
-            .filter_map(|node| {
-                if let Node::FunctionDeclaration(function_declaration) = node {
-                    let function_declaration = function_declaration.clone();
-                    Some((
-                        function_declaration.id.clone(),
-                        Function::CustomFunction {
-                            id: function_declaration.id,
-                            name: function_declaration.name,
-                            parameters: function_declaration.parameters,
-                            return_type: function_declaration.return_type,
-                            body: function_declaration.body,
-                        },
-                    ))
-                } else {
-                    None
-                }
+            .cloned()
+            .map(|function_declaration| {
+                (
+                    function_declaration.id.clone(),
+                    Function::CustomFunction {
+                        id: function_declaration.id,
+                        name: function_declaration.name,
+                        parameters: function_declaration.parameters,
+                        return_type: function_declaration.return_type,
+                        body: function_declaration.body,
+                    },
+                )
             })
             .collect();
 
@@ -65,5 +58,57 @@ impl AstBuilder {
             functions,
             nodes: self.nodes,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use crate::ast::node::{Ast, Function, FunctionId, FunctionReturnType, Node};
+
+    use super::AstBuilder;
+
+    #[test]
+    fn statement() {
+        let actual = AstBuilder::default()
+            .statement(|statement| statement.return_void())
+            .build();
+
+        let expected = Ast {
+            functions: HashMap::new(),
+            nodes: vec![Node::FunctionReturn { return_value: None }],
+        };
+
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn function_declaration() {
+        let actual = AstBuilder::default()
+            .function_declaration(|function_declaration| {
+                function_declaration
+                    .name("my_function")
+                    .no_parameters()
+                    .void()
+                    .body(|body| body)
+            })
+            .build();
+
+        let expected = Ast {
+            functions: HashMap::from_iter([(
+                FunctionId("my_function".to_owned()),
+                Function::CustomFunction {
+                    id: FunctionId("my_function".to_owned()),
+                    name: "my_function".to_owned(),
+                    parameters: Vec::new(),
+                    return_type: FunctionReturnType::Void,
+                    body: AstBuilder::default().build(),
+                },
+            )]),
+            nodes: Vec::new(),
+        };
+
+        assert_eq!(actual, expected);
     }
 }

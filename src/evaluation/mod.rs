@@ -4,8 +4,9 @@ use core::panic;
 use std::collections::HashMap;
 
 use crate::ast::node::{
-    Ast, BinaryOperation, BoolValue, Expression, Function, FunctionId, FunctionParameter,
-    FunctionReturnType, IfStatement, Node, Operation, UIntValue, UnaryOperation, Value, FunctionCall,
+    Ast, BinaryOperation, BoolValue, Expression, Function, FunctionCall, FunctionId,
+    FunctionParameter, FunctionReturnType, IfStatement, Node, Operation, UIntValue, UnaryOperation,
+    Value,
 };
 
 use self::intrinsics::evaluate_intrinsic_function;
@@ -89,8 +90,10 @@ impl Node {
                     value: return_value,
                 };
             }
-            Node::FunctionDeclaration(_) => {}
-            Node::FunctionCall(FunctionCall{function_id, parameters}) => {
+            Node::FunctionCall(FunctionCall {
+                function_id,
+                parameters,
+            }) => {
                 let function = &functions[function_id];
                 function.evaluate(parameters.clone(), &local_variables, functions);
             }

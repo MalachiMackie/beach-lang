@@ -30,7 +30,7 @@ impl IfStatementBuilder {
     }
 
     pub fn body(mut self, body_fn: impl Fn(AstBuilder) -> Ast) -> Self {
-        let body = body_fn(AstBuilder { nodes: Vec::new() });
+        let body = body_fn(AstBuilder::default());
         self.body = Some(body);
 
         self
@@ -42,7 +42,7 @@ impl IfStatementBuilder {
         body_fn: impl Fn(AstBuilder) -> Ast,
     ) -> Self {
         let check = check_fn(ExpressionBuilder {});
-        let body = body_fn(AstBuilder { nodes: Vec::new() });
+        let body = body_fn(AstBuilder::default());
 
         self.else_if_blocks.push((check, body));
 
@@ -50,7 +50,7 @@ impl IfStatementBuilder {
     }
 
     pub fn else_block(mut self, body_fn: impl Fn(AstBuilder) -> Ast) -> Self {
-        let body = body_fn(AstBuilder { nodes: Vec::new() });
+        let body = body_fn(AstBuilder::default());
 
         self.else_block = Some(body);
 

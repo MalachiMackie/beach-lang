@@ -12,7 +12,7 @@ use evaluation::intrinsics::get_intrinsic_functions;
 use crate::ast::node::{Type, UIntValue, Value};
 
 fn main() {
-    let ast = fibonacci(AstBuilder::new());
+    let ast = fibonacci(AstBuilder::default());
 
     ast.evaluate(HashMap::new(), get_intrinsic_functions());
 }

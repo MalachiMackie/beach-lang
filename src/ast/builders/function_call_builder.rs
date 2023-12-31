@@ -47,7 +47,7 @@ impl FunctionCallBuilder {
 
 #[cfg(test)]
 mod tests {
-    use crate::ast::node::FunctionId;
+    use crate::ast::node::{BoolValue, FunctionId, UIntValue, Value};
 
     use super::*;
 
@@ -64,5 +64,24 @@ mod tests {
         };
 
         assert_eq!(result, expected)
+    }
+
+    #[test]
+    fn function_call_parameter() {
+        let actual = FunctionCallBuilder::new()
+            .function_id("my_function")
+            .parameter(|param| param.value_literal(Value::Boolean(BoolValue(true))))
+            .parameter(|param| param.value_literal(Value::UInt(UIntValue(10))))
+            .build();
+
+        let expected = FunctionCall {
+            function_id: FunctionId("my_function".to_owned()),
+            parameters: vec![
+                Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
+                Expression::ValueLiteral(Value::UInt(UIntValue(10))),
+            ],
+        };
+
+        assert_eq!(actual, expected);
     }
 }
