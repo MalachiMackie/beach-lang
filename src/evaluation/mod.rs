@@ -4,8 +4,8 @@ use core::panic;
 use std::collections::HashMap;
 
 use crate::ast::node::{
-    Ast, BoolValue, Expression, Function, FunctionId, FunctionParameter, FunctionReturnType, Node,
-    Operation, UnaryOperation, Value,
+    Ast, BoolValue, Expression, Function, FunctionId, FunctionParameter, FunctionReturnType,
+    IfStatement, Node, Operation, UnaryOperation, Value,
 };
 
 use self::intrinsics::evaluate_intrinsic_function;
@@ -19,16 +19,33 @@ impl Ast {
         mut functions: HashMap<FunctionId, Function>,
     ) -> Option<Value> {
         let mut call_stack: Vec<FunctionId> = Vec::new();
-        let mut return_value = None;
 
         functions.extend(self.functions.clone());
 
-        for node in &self.nodes {
-            return_value = node.evaluate(&mut local_variables, &mut call_stack, &functions)
-        }
-
-        return_value
+        evaluate_nodes(
+            &self.nodes,
+            &mut local_variables,
+            &mut call_stack,
+            &functions,
+        )
     }
+}
+
+fn evaluate_nodes(
+    nodes: &[Node],
+    local_variables: &HashMap<String, Value>,
+    call_stack: &mut Vec<FunctionId>,
+    functions: &Functions,
+) -> Option<Value> {
+    let mut local_variables = local_variables.clone();
+    for node in nodes {
+        let return_value = node.evaluate(&mut local_variables, call_stack, &functions);
+        if return_value.is_some() {
+            return return_value;
+        }
+    }
+
+    None
 }
 
 impl Node {
@@ -46,7 +63,6 @@ impl Node {
                     var_name.to_owned(),
                     value.evaluate(functions, &local_variables),
                 );
-                None
             }
             Node::FunctionReturn { return_value } => {
                 let return_value = if let Some(expression) = return_value {
@@ -58,17 +74,62 @@ impl Node {
 
                 call_stack.pop();
 
-                return_value
+                return return_value;
             }
-            Node::FunctionDeclaration(_) => None,
+            Node::FunctionDeclaration(_) => {}
             Node::FunctionCall {
                 function_id,
                 parameters,
             } => {
                 let function = &functions[function_id];
-                function.evaluate(parameters.clone(), &local_variables, functions)
+                function.evaluate(parameters.clone(), &local_variables, functions);
+            }
+            Node::IfStatement(if_statement) => {
+                return if_statement.evaluate(functions, local_variables, call_stack);
+            }
+        };
+
+        None
+    }
+}
+
+impl IfStatement {
+    pub fn evaluate(
+        &self,
+        functions: &Functions,
+        local_variables: &HashMap<String, Value>,
+        call_stack: &mut Vec<FunctionId>,
+    ) -> Option<Value> {
+        let check_value = self.check_expression.evaluate(functions, local_variables);
+        let Value::Boolean(BoolValue(bool_value)) = check_value else {
+            panic!("Expected if statement check value to be boolean, but found {:?}", check_value)
+        };
+
+        if bool_value {
+            return evaluate_nodes(&self.if_block, local_variables, call_stack, functions);
+        }
+
+        for else_if_block in &self.else_if_blocks {
+            let check_value = else_if_block.check.evaluate(functions, local_variables);
+            let Value::Boolean(BoolValue(bool_value)) = check_value else {
+                panic!("Expected if statement check value to be boolean, but found {:?}", check_value)
+            };
+
+            if bool_value {
+                return evaluate_nodes(
+                    &else_if_block.block,
+                    local_variables,
+                    call_stack,
+                    functions,
+                );
             }
         }
+
+        if let Some(else_block) = &self.else_block {
+            return evaluate_nodes(&else_block, local_variables, call_stack, functions);
+        }
+
+        None
     }
 }
 

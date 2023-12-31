@@ -3,89 +3,75 @@ pub mod evaluation;
 
 use std::collections::HashMap;
 
-use ast::builders::ast_builder::AstBuilder;
+use ast::{builders::ast_builder::AstBuilder, node::FunctionParameter};
 use evaluation::intrinsics::get_intrinsic_functions;
 
 use crate::ast::node::{BoolValue, Expression, Type, UIntValue, Value};
 
 fn main() {
     let ast = AstBuilder::new()
-        .function_declaration(|function_declaration_builder| {
-            function_declaration_builder
+        .function_declaration(|function_declaration| {
+            function_declaration
                 .name("my_function")
-                .parameters(vec![(Type::UInt, "my_uint".to_owned()).into()])
-                .return_type(Type::Boolean)
-                .body(|builder| {
-                    builder
-                        .var_declaration(|var_declaration_builder| {
-                            var_declaration_builder
-                                .infer_type()
-                                .name("my_uint")
-                                .with_assignment(|expression_builder| {
-                                    expression_builder.value_literal(Value::UInt(UIntValue(15)))
+                .return_type(Type::UInt)
+                .parameters(vec![FunctionParameter::FunctionParameter {
+                    param_name: "param".to_owned(),
+                    param_type: Type::Boolean,
+                }])
+                .body(|body| {
+                    body.if_statement(|if_statement| {
+                        if_statement
+                            .check_expression(|check| check.variable("param"))
+                            .body(|body| {
+                                body.return_value(|return_value| {
+                                    return_value.value_literal(Value::UInt(UIntValue(69)))
                                 })
-                        })
-                        .var_declaration(|variable_declaration_builder| {
-                            variable_declaration_builder
-                                .infer_type()
-                                .name("my_value")
-                                .with_assignment(|expression_builder| {
-                                    expression_builder.operation(|operation_builder| {
-                                        operation_builder.not(|expression_builder| {
-                                            expression_builder
-                                                .value_literal(Value::Boolean(BoolValue(true)))
-                                        })
+                                .build()
+                            })
+                            .else_block(|else_block| {
+                                else_block
+                                    .return_value(|return_value| {
+                                        return_value.value_literal(Value::UInt(UIntValue(420)))
                                     })
-                                })
-                        })
-                        .var_declaration(|variable_declaration_builder| {
-                            variable_declaration_builder
-                                .declare_type(Type::Boolean)
-                                .name("my_bool")
-                                .with_assignment(|expression_builder| {
-                                    expression_builder
-                                        .value_literal(Value::Boolean(BoolValue(true)))
-                                })
-                        })
-                        .function_call(|function_call_builder| {
-                            function_call_builder
-                                .function_id("print")
-                                .parameter(|param_builder| param_builder.variable("my_bool"))
-                        })
-                        .function_call(|function_call_builder| {
-                            function_call_builder
-                                .function_id("print")
-                                .parameter(|param_builder| param_builder.variable("my_value"))
-                        })
-                        .function_call(|function_call_builder| {
-                            function_call_builder
-                                .function_id("print")
-                                .parameter(|param_builder| param_builder.variable("my_uint"))
-                        })
-                        .return_value(|_| Expression::ValueLiteral(Value::Boolean(BoolValue(true))))
+                                    .build()
+                            })
+                            .build()
+                    })
                 })
         })
-        .function_declaration(|function_declaration_builder| {
-            function_declaration_builder
-                .name("other_function")
-                .no_parameters()
-                .return_type(Type::Boolean)
-                .body(|builder| {
-                    builder.return_value(|expression_builder| {
-                        expression_builder.function_call(|function_call_builder| {
-                            function_call_builder.function_id("my_function").parameter(
-                                |expression_builder| {
-                                    expression_builder.value_literal(Value::UInt(UIntValue(10)))
-                                },
-                            )
+        .var_declaration(|var_declaration| {
+            var_declaration
+                .infer_type()
+                .name("val_1")
+                .with_assignment(|value| {
+                    value.function_call(|function_call| {
+                        function_call
+                            .function_id("my_function")
+                            .parameter(|param| param.value_literal(Value::Boolean(BoolValue(true))))
+                    })
+                })
+        })
+        .var_declaration(|var_declaration| {
+            var_declaration
+                .infer_type()
+                .name("val_2")
+                .with_assignment(|value| {
+                    value.function_call(|function_call| {
+                        function_call.function_id("my_function").parameter(|param| {
+                            param.value_literal(Value::Boolean(BoolValue(false)))
                         })
                     })
                 })
         })
-        .function_call(|function_call_builder| {
-            function_call_builder
-                .function_id("other_function")
-                .no_parameters()
+        .function_call(|function_call| {
+            function_call
+                .function_id("print")
+                .parameter(|param| param.variable("val_1"))
+        })
+        .function_call(|function_call| {
+            function_call
+                .function_id("print")
+                .parameter(|param| param.variable("val_2"))
         })
         .build();
 

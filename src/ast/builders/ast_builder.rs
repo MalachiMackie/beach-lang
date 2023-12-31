@@ -5,7 +5,7 @@ use crate::ast::node::{Ast, Expression, Function, FunctionId, Node};
 use super::{
     expression_builder::ExpressionBuilder,
     function_declaration_builder::FunctionDeclarationBuilder,
-    statement_builder::FunctionCallBuilder,
+    if_statement_builder::IfStatementBuilder, statement_builder::FunctionCallBuilder,
     variable_declaration_builder::VariableDeclarationBuilder,
 };
 
@@ -29,6 +29,14 @@ impl AstBuilder {
         });
 
         self.nodes.push(var_declaration_node);
+
+        self
+    }
+
+    pub fn if_statement(mut self, if_statement_fn: impl Fn(IfStatementBuilder) -> Node) -> Self {
+        let if_statement = if_statement_fn(IfStatementBuilder::new());
+
+        self.nodes.push(if_statement);
 
         self
     }

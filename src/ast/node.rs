@@ -15,6 +15,21 @@ pub enum Node {
         function_id: FunctionId,
         parameters: Vec<Expression>,
     },
+    IfStatement(IfStatement),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct IfStatement {
+    pub check_expression: Expression,
+        pub if_block: Vec<Node>,
+        pub else_if_blocks: Vec<ElseIfBlock>,
+        pub else_block: Option<Vec<Node>>
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ElseIfBlock {
+    pub check: Expression,
+    pub block: Vec<Node>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
