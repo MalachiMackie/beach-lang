@@ -86,6 +86,26 @@ pub enum Value {
     Boolean(BoolValue),
 }
 
+impl Value {
+    pub fn expect_uint(self, expect_message: &str) -> UIntValue {
+        if let Self::UInt(uint_value) = self {
+            Some(uint_value)
+        } else {
+            None
+        }
+        .expect(expect_message)
+    }
+
+    pub fn expect_bool(self, expect_message: &str) -> BoolValue {
+        if let Self::Boolean(bool_value) = self {
+            Some(bool_value)
+        } else {
+            None
+        }
+        .expect(expect_message)
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum VariableDeclarationType {
     Infer,
@@ -117,12 +137,12 @@ pub enum Operation {
     },
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum UnaryOperation {
     Not,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum BinaryOperation {
     Plus,
     GreaterThan,

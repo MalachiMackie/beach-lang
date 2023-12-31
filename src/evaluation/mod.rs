@@ -1,12 +1,12 @@
 pub mod intrinsics;
+mod operation;
 
 use core::panic;
 use std::collections::HashMap;
 
 use crate::ast::node::{
-    Ast, BinaryOperation, BoolValue, Expression, Function, FunctionCall, FunctionId,
-    FunctionParameter, FunctionReturnType, IfStatement, Node, Operation, UIntValue, UnaryOperation,
-    Value,
+    Ast, BoolValue, Expression, Function, FunctionCall, FunctionId,
+    FunctionParameter, FunctionReturnType, IfStatement, Node, Value,
 };
 
 use self::intrinsics::evaluate_intrinsic_function;
@@ -244,61 +244,6 @@ impl Function {
                 evaluate_custom_function(id, body, local_variables, call_stack, functions)
             }
             Function::Intrinsic { id, .. } => evaluate_intrinsic_function(id, &local_variables),
-        }
-    }
-}
-
-impl Operation {
-    pub fn evaluate(
-        &self,
-        functions: &Functions,
-        local_variables: &HashMap<String, Value>,
-        call_stack: &mut Vec<FunctionId>,
-    ) -> Value {
-        match self {
-            Operation::Unary {
-                operation: UnaryOperation::Not,
-                value,
-            } => {
-                let bool_value = value.evaluate(functions, local_variables, call_stack);
-                let Value::Boolean(BoolValue(val)) =bool_value else {
-                    panic!("Expected not argument to be boolean")
-                };
-                Value::Boolean(BoolValue(!val))
-            }
-            Operation::Binary {
-                operation,
-                left,
-                right,
-            } => {
-                let left_value = left.evaluate(functions, local_variables, call_stack);
-                let right_value = right.evaluate(functions, local_variables, call_stack);
-
-                match operation {
-                    BinaryOperation::Plus => {
-                        let Value::UInt(UIntValue(left_uint)) = left_value else {
-                            panic!("Expected a uint, but found {:?}", left_value);
-                        };
-
-                        let Value::UInt(UIntValue(right_uint)) = right_value else {
-                            panic!("Expected a uint, but found {:?}", right_value);
-                        };
-
-                        Value::UInt(UIntValue(left_uint + right_uint))
-                    }
-                    BinaryOperation::GreaterThan => {
-                        let Value::UInt(UIntValue(left_uint)) = left_value else {
-                            panic!("Expected a uint, but found {:?}", left_value);
-                        };
-
-                        let Value::UInt(UIntValue(right_uint)) = right_value else {
-                            panic!("Expected a uint, but found {:?}", right_value);
-                        };
-
-                        Value::Boolean(BoolValue(left_uint > right_uint))
-                    }
-                }
-            }
         }
     }
 }
