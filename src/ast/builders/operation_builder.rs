@@ -1,4 +1,4 @@
-use crate::ast::node::{Expression, Operation, UnaryOperation};
+use crate::ast::node::{BinaryOperation, Expression, Operation, UnaryOperation};
 
 use super::expression_builder::ExpressionBuilder;
 
@@ -9,9 +9,34 @@ impl OperationBuilder {
         self,
         expression_fn: TExpressionFn,
     ) -> Operation {
-        Operation::Unary(UnaryOperation::Not {
+        Operation::Unary {
+            operation: UnaryOperation::Not,
             value: Box::new(expression_fn(ExpressionBuilder {})),
-        })
+        }
+    }
+
+    pub fn greater_than(
+        self,
+        left_fn: impl Fn(ExpressionBuilder) -> Expression,
+        right_fn: impl Fn(ExpressionBuilder) -> Expression,
+    ) -> Operation {
+        Operation::Binary {
+            operation: BinaryOperation::GreaterThan,
+            left: Box::new(left_fn(ExpressionBuilder {})),
+            right: Box::new(right_fn(ExpressionBuilder {})),
+        }
+    }
+
+    pub fn plus(
+        self,
+        left_fn: impl Fn(ExpressionBuilder) -> Expression,
+        right_fn: impl Fn(ExpressionBuilder) -> Expression,
+    ) -> Operation {
+        Operation::Binary {
+            operation: BinaryOperation::Plus,
+            left: Box::new(left_fn(ExpressionBuilder {})),
+            right: Box::new(right_fn(ExpressionBuilder {})),
+        }
     }
 }
 
@@ -43,9 +68,10 @@ mod tests {
             nodes: vec![Node::VariableDeclaration {
                 var_type: VariableDeclarationType::Infer,
                 var_name: "my_var".to_owned(),
-                value: Expression::Operation(Operation::Unary(UnaryOperation::Not {
+                value: Expression::Operation(Operation::Unary {
+                    operation: UnaryOperation::Not,
                     value: Box::new(Expression::ValueLiteral(Value::Boolean(BoolValue(true)))),
-                })),
+                }),
             }],
         };
 

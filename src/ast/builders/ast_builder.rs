@@ -19,6 +19,12 @@ impl AstBuilder {
         AstBuilder { nodes: Vec::new() }
     }
 
+    pub fn return_void(mut self) -> Self {
+        self.nodes.push(Node::FunctionReturn { return_value: None });
+
+        self
+    }
+
     pub fn var_declaration(
         mut self,
         var_declaration_fn: impl Fn(VariableDeclarationBuilder) -> Node,

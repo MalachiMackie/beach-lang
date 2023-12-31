@@ -21,9 +21,9 @@ pub enum Node {
 #[derive(Clone, Debug, PartialEq)]
 pub struct IfStatement {
     pub check_expression: Expression,
-        pub if_block: Vec<Node>,
-        pub else_if_blocks: Vec<ElseIfBlock>,
-        pub else_block: Option<Vec<Node>>
+    pub if_block: Vec<Node>,
+    pub else_if_blocks: Vec<ElseIfBlock>,
+    pub else_block: Option<Vec<Node>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -104,12 +104,26 @@ pub struct BoolValue(pub bool);
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Operation {
-    Unary(UnaryOperation),
+    Unary {
+        operation: UnaryOperation,
+        value: Box<Expression>,
+    },
+    Binary {
+        operation: BinaryOperation,
+        left: Box<Expression>,
+        right: Box<Expression>,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum UnaryOperation {
-    Not { value: Box<Expression> },
+    Not,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum BinaryOperation {
+    Plus,
+    GreaterThan,
 }
 
 #[derive(Debug, Clone, PartialEq)]

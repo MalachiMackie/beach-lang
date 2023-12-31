@@ -4,8 +4,8 @@ use core::panic;
 use std::collections::HashMap;
 
 use crate::ast::node::{
-    Ast, BoolValue, Expression, Function, FunctionId, FunctionParameter, FunctionReturnType,
-    IfStatement, Node, Operation, UnaryOperation, Value,
+    Ast, BinaryOperation, BoolValue, Expression, Function, FunctionId, FunctionParameter,
+    FunctionReturnType, IfStatement, Node, Operation, UIntValue, UnaryOperation, Value,
 };
 
 use self::intrinsics::evaluate_intrinsic_function;
@@ -17,7 +17,7 @@ impl Ast {
         &self,
         mut local_variables: HashMap<String, Value>,
         mut functions: HashMap<FunctionId, Function>,
-    ) -> Option<Value> {
+    ) -> NodeResult {
         let mut call_stack: Vec<FunctionId> = Vec::new();
 
         functions.extend(self.functions.clone());
@@ -36,16 +36,27 @@ fn evaluate_nodes(
     local_variables: &HashMap<String, Value>,
     call_stack: &mut Vec<FunctionId>,
     functions: &Functions,
-) -> Option<Value> {
+) -> NodeResult {
     let mut local_variables = local_variables.clone();
     for node in nodes {
         let return_value = node.evaluate(&mut local_variables, call_stack, &functions);
-        if return_value.is_some() {
+        if return_value.is_return() {
             return return_value;
         }
     }
 
-    None
+    NodeResult::None
+}
+
+pub enum NodeResult {
+    None,
+    FunctionReturn { value: Option<Value> },
+}
+
+impl NodeResult {
+    fn is_return(&self) -> bool {
+        matches!(self, NodeResult::FunctionReturn { .. })
+    }
 }
 
 impl Node {
@@ -54,7 +65,7 @@ impl Node {
         local_variables: &mut HashMap<String, Value>,
         call_stack: &mut Vec<FunctionId>,
         functions: &Functions,
-    ) -> Option<Value> {
+    ) -> NodeResult {
         match self {
             Node::VariableDeclaration {
                 var_name, value, ..
@@ -74,7 +85,9 @@ impl Node {
 
                 call_stack.pop();
 
-                return return_value;
+                return NodeResult::FunctionReturn {
+                    value: return_value,
+                };
             }
             Node::FunctionDeclaration(_) => {}
             Node::FunctionCall {
@@ -89,7 +102,7 @@ impl Node {
             }
         };
 
-        None
+        NodeResult::None
     }
 }
 
@@ -99,7 +112,7 @@ impl IfStatement {
         functions: &Functions,
         local_variables: &HashMap<String, Value>,
         call_stack: &mut Vec<FunctionId>,
-    ) -> Option<Value> {
+    ) -> NodeResult {
         let check_value = self.check_expression.evaluate(functions, local_variables);
         let Value::Boolean(BoolValue(bool_value)) = check_value else {
             panic!("Expected if statement check value to be boolean, but found {:?}", check_value)
@@ -129,7 +142,7 @@ impl IfStatement {
             return evaluate_nodes(&else_block, local_variables, call_stack, functions);
         }
 
-        None
+        NodeResult::None
     }
 }
 
@@ -165,7 +178,11 @@ fn evaluate_custom_function(
     parameters: HashMap<String, Value>,
     functions: &Functions,
 ) -> Option<Value> {
-    body.evaluate(parameters, functions.clone())
+    if let NodeResult::FunctionReturn { value } = body.evaluate(parameters, functions.clone()) {
+        value
+    } else {
+        None
+    }
 }
 
 impl Function {
@@ -177,9 +194,10 @@ impl Function {
     ) -> Option<Value> {
         if parameter_expressions.len() != self.parameters().len() {
             panic!(
-                "Expected {} parameters, but found {}",
+                "Expected {} parameters, but found {} for {}",
                 self.parameters().len(),
-                parameter_expressions.len()
+                parameter_expressions.len(),
+                self.name()
             );
         }
 
@@ -217,12 +235,48 @@ impl Operation {
         local_variables: &HashMap<String, Value>,
     ) -> Value {
         match self {
-            Operation::Unary(UnaryOperation::Not { value }) => {
+            Operation::Unary {
+                operation: UnaryOperation::Not,
+                value,
+            } => {
                 let bool_value = value.evaluate(functions, local_variables);
                 let Value::Boolean(BoolValue(val)) =bool_value else {
                     panic!("Expected not argument to be boolean")
                 };
                 Value::Boolean(BoolValue(!val))
+            }
+            Operation::Binary {
+                operation,
+                left,
+                right,
+            } => {
+                let left_value = left.evaluate(functions, local_variables);
+                let right_value = right.evaluate(functions, local_variables);
+
+                match operation {
+                    BinaryOperation::Plus => {
+                        let Value::UInt(UIntValue(left_uint)) = left_value else {
+                            panic!("Expected a uint, but found {:?}", left_value);
+                        };
+
+                        let Value::UInt(UIntValue(right_uint)) = right_value else {
+                            panic!("Expected a uint, but found {:?}", right_value);
+                        };
+
+                        Value::UInt(UIntValue(left_uint + right_uint))
+                    }
+                    BinaryOperation::GreaterThan => {
+                        let Value::UInt(UIntValue(left_uint)) = left_value else {
+                            panic!("Expected a uint, but found {:?}", left_value);
+                        };
+
+                        let Value::UInt(UIntValue(right_uint)) = right_value else {
+                            panic!("Expected a uint, but found {:?}", right_value);
+                        };
+
+                        Value::Boolean(BoolValue(left_uint > right_uint))
+                    }
+                }
             }
         }
     }
