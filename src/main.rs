@@ -1,4 +1,5 @@
 mod ast;
+mod type_checking;
 pub mod evaluation;
 
 use std::collections::HashMap;
