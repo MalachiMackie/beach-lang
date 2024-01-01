@@ -2,14 +2,12 @@ mod expression;
 mod function;
 mod if_statement;
 pub mod intrinsics;
+mod node;
 mod operation;
 
-use core::panic;
 use std::collections::HashMap;
 
-use crate::ast::node::{
-    Ast, Expression, Function, FunctionCall, FunctionId, FunctionReturnType, Node, Value,
-};
+use crate::ast::node::{Ast, Function, FunctionId, Node, Value};
 
 type Functions = HashMap<FunctionId, Function>;
 
@@ -58,51 +56,5 @@ pub enum NodeResult {
 impl NodeResult {
     fn is_return(&self) -> bool {
         matches!(self, NodeResult::FunctionReturn { .. })
-    }
-}
-
-impl Node {
-    pub fn evaluate(
-        &self,
-        local_variables: &mut HashMap<String, Value>,
-        call_stack: &mut Vec<FunctionId>,
-        functions: &Functions,
-    ) -> NodeResult {
-        match self {
-            Node::VariableDeclaration {
-                var_name, value, ..
-            } => {
-                local_variables.insert(
-                    var_name.to_owned(),
-                    value.evaluate(functions, &local_variables, call_stack),
-                );
-            }
-            Node::FunctionReturn { return_value } => {
-                let return_value = if let Some(expression) = return_value {
-                    let value = expression.evaluate(functions, &local_variables, call_stack);
-                    Some(value)
-                } else {
-                    None
-                };
-
-                call_stack.pop();
-
-                return NodeResult::FunctionReturn {
-                    value: return_value,
-                };
-            }
-            Node::FunctionCall(FunctionCall {
-                function_id,
-                parameters,
-            }) => {
-                let function = &functions[function_id];
-                function.evaluate(parameters.clone(), &local_variables, functions, call_stack);
-            }
-            Node::IfStatement(if_statement) => {
-                return if_statement.evaluate(functions, local_variables, call_stack);
-            }
-        };
-
-        NodeResult::None
     }
 }

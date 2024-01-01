@@ -42,7 +42,7 @@ fn intrinsic_print(value: &Value) {
 mod tests {
     use std::collections::HashMap;
 
-    use crate::ast::node::{BoolValue, Function, FunctionId, Value, UIntValue};
+    use crate::ast::node::{BoolValue, FunctionId, UIntValue, Value};
 
     use super::{evaluate_intrinsic_function, get_intrinsic_functions};
 
