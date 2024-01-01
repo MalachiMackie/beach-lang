@@ -1,3 +1,4 @@
+mod if_statement;
 pub mod intrinsics;
 mod operation;
 
@@ -5,8 +6,8 @@ use core::panic;
 use std::collections::HashMap;
 
 use crate::ast::node::{
-    Ast, BoolValue, Expression, Function, FunctionCall, FunctionId,
-    FunctionParameter, FunctionReturnType, IfStatement, Node, Value,
+    Ast, BoolValue, Expression, Function, FunctionCall, FunctionId, FunctionParameter,
+    FunctionReturnType, IfStatement, Node, Value,
 };
 
 use self::intrinsics::evaluate_intrinsic_function;
@@ -49,6 +50,7 @@ fn evaluate_nodes(
     NodeResult::None
 }
 
+#[derive(Debug, PartialEq)]
 pub enum NodeResult {
     None,
     FunctionReturn { value: Option<Value> },
@@ -101,50 +103,6 @@ impl Node {
                 return if_statement.evaluate(functions, local_variables, call_stack);
             }
         };
-
-        NodeResult::None
-    }
-}
-
-impl IfStatement {
-    pub fn evaluate(
-        &self,
-        functions: &Functions,
-        local_variables: &HashMap<String, Value>,
-        call_stack: &mut Vec<FunctionId>,
-    ) -> NodeResult {
-        let check_value = self
-            .check_expression
-            .evaluate(functions, local_variables, call_stack);
-        let Value::Boolean(BoolValue(bool_value)) = check_value else {
-            panic!("Expected if statement check value to be boolean, but found {:?}", check_value)
-        };
-
-        if bool_value {
-            return evaluate_nodes(&self.if_block, local_variables, call_stack, functions);
-        }
-
-        for else_if_block in &self.else_if_blocks {
-            let check_value = else_if_block
-                .check
-                .evaluate(functions, local_variables, call_stack);
-            let Value::Boolean(BoolValue(bool_value)) = check_value else {
-                panic!("Expected if statement check value to be boolean, but found {:?}", check_value)
-            };
-
-            if bool_value {
-                return evaluate_nodes(
-                    &else_if_block.block,
-                    local_variables,
-                    call_stack,
-                    functions,
-                );
-            }
-        }
-
-        if let Some(else_block) = &self.else_block {
-            return evaluate_nodes(&else_block, local_variables, call_stack, functions);
-        }
 
         NodeResult::None
     }
