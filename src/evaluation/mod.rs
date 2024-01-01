@@ -1,3 +1,4 @@
+mod function;
 mod if_statement;
 pub mod intrinsics;
 mod operation;
@@ -6,11 +7,8 @@ use core::panic;
 use std::collections::HashMap;
 
 use crate::ast::node::{
-    Ast, BoolValue, Expression, Function, FunctionCall, FunctionId, FunctionParameter,
-    FunctionReturnType, IfStatement, Node, Value,
+    Ast, Expression, Function, FunctionCall, FunctionId, FunctionReturnType, Node, Value,
 };
-
-use self::intrinsics::evaluate_intrinsic_function;
 
 type Functions = HashMap<FunctionId, Function>;
 
@@ -139,69 +137,6 @@ impl Expression {
                 .get(variable_name)
                 .expect("variable should exist")
                 .clone(),
-        }
-    }
-}
-
-fn evaluate_custom_function(
-    id: &FunctionId,
-    body: &[Node],
-    parameters: HashMap<String, Value>,
-    call_stack: &mut Vec<FunctionId>,
-    functions: &Functions,
-) -> Option<Value> {
-    call_stack.push(id.clone());
-    if let NodeResult::FunctionReturn { value } =
-        evaluate_nodes(body, &parameters, call_stack, functions)
-    {
-        call_stack.pop();
-        value
-    } else {
-        call_stack.pop();
-        None
-    }
-}
-
-impl Function {
-    pub fn evaluate(
-        &self,
-        parameter_expressions: Vec<Expression>,
-        local_variables: &HashMap<String, Value>,
-        functions: &Functions,
-        call_stack: &mut Vec<FunctionId>,
-    ) -> Option<Value> {
-        if parameter_expressions.len() != self.parameters().len() {
-            panic!(
-                "Expected {} parameters, but found {} for {}",
-                self.parameters().len(),
-                parameter_expressions.len(),
-                self.name()
-            );
-        }
-
-        let parameter_values: Vec<Value> = parameter_expressions
-            .into_iter()
-            .map(|expression| expression.evaluate(functions, local_variables, call_stack))
-            .collect();
-
-        let local_variables = self
-            .parameters()
-            .iter()
-            .enumerate()
-            .map(|(i, function_parameter)| {
-                let param_name = match function_parameter {
-                    FunctionParameter::FunctionParameter { param_name, .. }
-                    | FunctionParameter::IntrinsicAny { param_name } => param_name,
-                };
-                (param_name.clone(), parameter_values[i].clone())
-            })
-            .collect();
-
-        match self {
-            Function::CustomFunction { id, body, .. } => {
-                evaluate_custom_function(id, body, local_variables, call_stack, functions)
-            }
-            Function::Intrinsic { id, .. } => evaluate_intrinsic_function(id, &local_variables),
         }
     }
 }
