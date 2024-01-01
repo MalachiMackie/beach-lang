@@ -1,3 +1,4 @@
+mod expression;
 mod function;
 mod if_statement;
 pub mod intrinsics;
@@ -103,40 +104,5 @@ impl Node {
         };
 
         NodeResult::None
-    }
-}
-
-impl Expression {
-    pub fn evaluate(
-        &self,
-        functions: &Functions,
-        local_variables: &HashMap<String, Value>,
-        call_stack: &mut Vec<FunctionId>,
-    ) -> Value {
-        match self {
-            Expression::ValueLiteral(value) => value.clone(),
-            Expression::FunctionCall(function_call) => {
-                let function = &functions[&function_call.function_id];
-                if matches!(function.return_type(), FunctionReturnType::Void) {
-                    panic!("Function expected to be value, but is void");
-                };
-
-                function
-                    .evaluate(
-                        function_call.parameters.clone(),
-                        local_variables,
-                        functions,
-                        call_stack,
-                    )
-                    .expect("function has a non void return type")
-            }
-            Expression::Operation(operation) => {
-                operation.evaluate(functions, local_variables, call_stack)
-            }
-            Expression::VariableAccess(variable_name) => local_variables
-                .get(variable_name)
-                .expect("variable should exist")
-                .clone(),
-        }
     }
 }
