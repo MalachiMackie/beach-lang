@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::ast::node::{Expression, Function, FunctionId, FunctionParameter, Node, Value};
 
-use super::{evaluate_nodes, intrinsics::evaluate_intrinsic_function, Functions, NodeResult};
+use super::{ast::evaluate_nodes, intrinsics::evaluate_intrinsic_function, Functions, NodeResult};
 
 fn evaluate_custom_function(
     id: &FunctionId,

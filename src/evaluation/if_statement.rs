@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::ast::node::{BoolValue, FunctionId, IfStatement, Value};
 
-use super::{evaluate_nodes, Functions, NodeResult};
+use super::{ast::evaluate_nodes, Functions, NodeResult};
 
 impl IfStatement {
     pub fn evaluate(
