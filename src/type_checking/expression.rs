@@ -29,6 +29,23 @@ impl Expression {
                 .and_then(|x| x.get_type(functions, local_variables)),
         }
     }
+
+    pub fn type_check(
+        &self,
+        functions: &HashMap<FunctionId, Function>,
+        local_variables: &HashMap<String, Expression>,
+    ) -> Result<(), Vec<TypeCheckingError>> {
+        match self {
+            Expression::ValueLiteral(_) => Ok(()),
+            Expression::FunctionCall(function_call) => {
+                function_call.type_check(functions, local_variables)
+            }
+            Expression::Operation(operation) => operation.type_check(functions, local_variables),
+            Expression::VariableAccess(var_name) => {
+                type_check_variable_access(var_name, local_variables).map_err(|err| vec![err])
+            }
+        }
+    }
 }
 
 fn type_check_variable_access(
@@ -48,8 +65,8 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::ast::node::{
-        BoolValue, Expression, Function, FunctionCall, FunctionId, FunctionReturnType, Operation,
-        Type, UnaryOperation, Value,
+        BoolValue, Expression, Function, FunctionCall, FunctionId, FunctionParameter,
+        FunctionReturnType, Operation, Type, UIntValue, UnaryOperation, Value,
     };
 
     use super::type_check_variable_access;
@@ -163,5 +180,111 @@ mod tests {
         assert!(
             matches!(result, Err(e) if e.message == "Could not find variable with name my_var")
         );
+    }
+
+    #[test]
+    fn expression_type_check_value_literal() {
+        let expression = Expression::ValueLiteral(Value::Boolean(BoolValue(true)));
+
+        let result = expression.type_check(&HashMap::new(), &HashMap::new());
+
+        assert!(matches!(result, Ok(())));
+    }
+
+    #[test]
+    fn expression_type_check_function_call_successful() {
+        let expression = Expression::FunctionCall(FunctionCall {
+            function_id: FunctionId("my_function".to_owned()),
+            parameters: Vec::new(),
+        });
+
+        let functions = HashMap::from_iter([(
+            FunctionId("my_function".to_owned()),
+            Function::CustomFunction {
+                id: FunctionId("my_function".to_owned()),
+                name: "my_function".to_owned(),
+                parameters: Vec::new(),
+                return_type: FunctionReturnType::Type(Type::Boolean),
+                body: Vec::new(),
+            },
+        )]);
+
+        let result = expression.type_check(&functions, &HashMap::new());
+
+        assert!(matches!(result, Ok(())));
+    }
+
+    #[test]
+    fn expression_type_check_function_call_failure() {
+        let expression = Expression::FunctionCall(FunctionCall {
+            function_id: FunctionId("my_function".to_owned()),
+            parameters: Vec::new(),
+        });
+
+        let functions = HashMap::from_iter([(
+            FunctionId("my_function".to_owned()),
+            Function::CustomFunction {
+                id: FunctionId("my_function".to_owned()),
+                name: "my_function".to_owned(),
+                parameters: vec![FunctionParameter::FunctionParameter {
+                    param_type: Type::Boolean,
+                    param_name: "param".to_owned(),
+                }],
+                return_type: FunctionReturnType::Type(Type::Boolean),
+                body: Vec::new(),
+            },
+        )]);
+
+        let result = expression.type_check(&functions, &HashMap::new());
+
+        assert!(matches!(result, Err(_)));
+    }
+
+    #[test]
+    fn expression_type_check_operation_successful() {
+        let expression = Expression::Operation(Operation::Unary {
+            operation: UnaryOperation::Not,
+            value: Box::new(Expression::ValueLiteral(Value::Boolean(BoolValue(true)))),
+        });
+
+        let result = expression.type_check(&HashMap::new(), &HashMap::new());
+
+        assert!(matches!(result, Ok(())));
+    }
+
+    #[test]
+    fn expression_type_check_operation_failure() {
+        let expression = Expression::Operation(Operation::Unary {
+            operation: UnaryOperation::Not,
+            value: Box::new(Expression::ValueLiteral(Value::UInt(UIntValue(10)))),
+        });
+
+        let result = expression.type_check(&HashMap::new(), &HashMap::new());
+
+        assert!(matches!(result, Err(_)));
+    }
+
+    #[test]
+    fn expression_type_check_variable_access_successful() {
+        let expression = Expression::VariableAccess("my_var".to_owned());
+
+        let local_variables = HashMap::from_iter([(
+            "my_var".to_owned(),
+            Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
+        )]);
+
+        let result = expression.type_check(&HashMap::new(), &local_variables);
+
+        assert!(matches!(result, Ok(())));
+    }
+
+    #[test]
+
+    fn expression_type_check_variable_access_failure() {
+        let expression = Expression::VariableAccess("my_var".to_owned());
+
+        let result = expression.type_check(&HashMap::new(), &HashMap::new());
+
+        assert!(matches!(result, Err(_)));
     }
 }

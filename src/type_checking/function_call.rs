@@ -5,7 +5,7 @@ use crate::ast::node::{Expression, Function, FunctionCall, FunctionId, FunctionP
 use super::{verify_type, TypeCheckingError};
 
 impl FunctionCall {
-    fn type_check(
+    pub(super) fn type_check(
         &self,
         functions: &HashMap<FunctionId, Function>,
         local_variables: &HashMap<String, Expression>,
