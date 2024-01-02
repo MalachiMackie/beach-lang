@@ -54,6 +54,14 @@ pub enum FunctionParameter {
     },
 }
 
+impl FunctionParameter {
+    pub fn name(&self) -> &str {
+        match self {
+            FunctionParameter::IntrinsicAny { param_name } | FunctionParameter::FunctionParameter { param_name, .. } => &param_name
+        }
+    }
+}
+
 impl From<(Type, String)> for FunctionParameter {
     fn from((param_type, name): (Type, String)) -> Self {
         FunctionParameter::FunctionParameter {
@@ -79,6 +87,12 @@ pub struct FunctionCall {
 
 #[derive(Debug, PartialEq, Hash, Clone, Eq)]
 pub struct FunctionId(pub String);
+
+impl Display for FunctionId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
+    }
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Value {

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::ast::node::{
-    BinaryOperation, Function, FunctionId, Operation, Type, UnaryOperation, Value,
+    BinaryOperation, Function, FunctionId, Operation, Type, UnaryOperation, Value, Expression,
 };
 
 use super::{verify_type, TypeCheckingError};
@@ -27,7 +27,7 @@ impl Operation {
     pub fn type_check(
         &self,
         functions: &HashMap<FunctionId, Function>,
-        local_variables: &HashMap<String, Value>,
+        local_variables: &HashMap<String, Expression>,
     ) -> Result<(), Vec<TypeCheckingError>> {
         match self {
             Operation::Unary {

@@ -3,6 +3,7 @@ use crate::ast::node::Type;
 mod expression;
 mod operation;
 mod value;
+mod function_call;
 
 #[derive(Debug)]
 pub struct TypeCheckingError {

@@ -1,14 +1,17 @@
 use std::collections::HashMap;
 
-use crate::ast::node::{Expression, Function, FunctionId, FunctionReturnType, Type, Value};
+use crate::ast::node::{
+    Expression, Function, FunctionCall, FunctionId, FunctionParameter, FunctionReturnType, Type,
+    Value,
+};
 
-use super::TypeCheckingError;
+use super::{verify_type, TypeCheckingError};
 
 impl Expression {
     pub fn get_type(
         &self,
         functions: &HashMap<FunctionId, Function>,
-        local_variables: &HashMap<String, Value>,
+        local_variables: &HashMap<String, Expression>,
     ) -> Option<Type> {
         match self {
             Expression::ValueLiteral(value) => Some(value.get_type()),
@@ -21,9 +24,9 @@ impl Expression {
                 }
             }
             Expression::Operation(operation) => Some(operation.get_type()),
-            Expression::VariableAccess(var_name) => {
-                local_variables.get(var_name).map(|x| x.get_type())
-            }
+            Expression::VariableAccess(var_name) => local_variables
+                .get(var_name)
+                .and_then(|x| x.get_type(functions, local_variables)),
         }
     }
 }
@@ -121,8 +124,10 @@ mod tests {
     fn expression_get_type_variable_access() {
         let expression = Expression::VariableAccess("my_var".to_owned());
 
-        let local_variables =
-            HashMap::from_iter([("my_var".to_owned(), Value::Boolean(BoolValue(true)))]);
+        let local_variables = HashMap::from_iter([(
+            "my_var".to_owned(),
+            Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
+        )]);
 
         let result = expression.get_type(&HashMap::new(), &local_variables);
 
