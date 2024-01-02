@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Display};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Node {
@@ -116,6 +116,15 @@ pub enum VariableDeclarationType {
 pub enum Type {
     UInt,
     Boolean,
+}
+
+impl Display for Type {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Type::UInt => f.write_str("UInt"),
+            Type::Boolean => f.write_str("Boolean"),
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
