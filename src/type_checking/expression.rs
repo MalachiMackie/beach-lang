@@ -2,6 +2,8 @@ use std::collections::HashMap;
 
 use crate::ast::node::{Expression, Function, FunctionId, FunctionReturnType, Type, Value};
 
+use super::TypeCheckingError;
+
 impl Expression {
     pub fn get_type(
         &self,
@@ -26,6 +28,18 @@ impl Expression {
     }
 }
 
+fn type_check_variable_access(
+    var_name: &str,
+    local_variables: &HashMap<String, Expression>,
+) -> Result<(), TypeCheckingError> {
+    local_variables
+        .get(var_name)
+        .ok_or_else(|| TypeCheckingError {
+            message: format!("Could not find variable with name {}", var_name),
+        })
+        .map(|_| ())
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
@@ -34,6 +48,8 @@ mod tests {
         BoolValue, Expression, Function, FunctionCall, FunctionId, FunctionReturnType, Operation,
         Type, UnaryOperation, Value,
     };
+
+    use super::type_check_variable_access;
 
     #[test]
     fn expression_get_type_value_literal() {
@@ -120,5 +136,27 @@ mod tests {
         let result = expression.get_type(&HashMap::new(), &HashMap::new());
 
         assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_type_check_variable_access_success() {
+        let variables = HashMap::from_iter([(
+            "my_var".to_owned(),
+            Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
+        )]);
+
+        let result = type_check_variable_access("my_var", &variables);
+
+        assert!(matches!(result, Ok(_)));
+    }
+
+    #[test]
+    fn test_type_check_variable_access_failure() {
+        let variables = HashMap::new();
+        let result = type_check_variable_access("my_var", &variables);
+
+        assert!(
+            matches!(result, Err(e) if e.message == "Could not find variable with name my_var")
+        );
     }
 }
