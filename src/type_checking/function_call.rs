@@ -10,38 +10,55 @@ impl FunctionCall {
         functions: &HashMap<FunctionId, Function>,
         local_variables: &HashMap<String, Expression>,
     ) -> Result<(), Vec<TypeCheckingError>> {
+        let mut errors = Vec::new();
         let function = functions.get(&self.function_id);
 
-        let Some(function) = function else {
-            return Err(vec![TypeCheckingError{message: format!("Could not find function with name {}", self.function_id)}])
+        // type check each of the parameter expressions (regardless of if they are the correct parameters for the function)
+        errors.extend(
+            self.parameters
+                .iter()
+                .filter_map(|param| param.type_check(functions, local_variables).err())
+                .flat_map(|x| x),
+        );
+
+        // if the found a valid function
+        if let Some(function) = function {
+            let function_params = function.parameters();
+
+            // check we hav ethe correct number of parameters
+            if self.parameters.len() != function_params.len() {
+                errors.push(TypeCheckingError {
+                    message: format!(
+                        "{} expects {} parameter(s), but you provided {}",
+                        function.name(),
+                        function_params.len(),
+                        self.parameters.len()
+                    ),
+                });
+            }
+
+            // check that all of our parameters expressions have the correct type for it's corresponding parameter
+            errors.extend(
+                self.parameters
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(i, param_expression)| {
+                        function_params.get(i).map(|function_param| {
+                            (
+                                function_param,
+                                param_expression.get_type(functions, local_variables),
+                            )
+                        })
+                    })
+                    .map(|(function_param, param_type)| function_param.verify_type(param_type))
+                    .filter_map(|result| result.err()),
+            );
+        } else {
+            // we didn't find a valid function, add an error
+            errors.push(TypeCheckingError {
+                message: format!("Could not find function with name {}", self.function_id),
+            });
         };
-
-        let function_params = function.parameters();
-
-        if self.parameters.len() != function_params.len() {
-            return Err(vec![TypeCheckingError {
-                message: format!(
-                    "{} expects {} parameters, but you provided {}",
-                    function.name(),
-                    function_params.len(),
-                    self.parameters.len()
-                ),
-            }]);
-        }
-
-        let errors: Vec<_> = self
-            .parameters
-            .iter()
-            .enumerate()
-            .map(|(i, param_expression)| {
-                (
-                    &function_params[i],
-                    param_expression.get_type(functions, local_variables),
-                )
-            })
-            .map(|(function_param, param_type)| function_param.verify_type(param_type))
-            .filter_map(|result| result.err())
-            .collect();
 
         if errors.is_empty() {
             Ok(())
@@ -56,7 +73,7 @@ impl FunctionParameter {
         match self {
             FunctionParameter::IntrinsicAny { .. } if found_type.is_none() => {
                 Err(TypeCheckingError {
-                    message: format!("Expecte parameter {} to be present", self.name()),
+                    message: format!("Expected parameter {} to be present", self.name()),
                 })
             }
             FunctionParameter::IntrinsicAny { .. } => Ok(()),
@@ -72,8 +89,8 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::ast::node::{
-        BoolValue, Expression, Function, FunctionCall, FunctionId, FunctionParameter,
-        FunctionReturnType, Type, UIntValue, Value,
+        BinaryOperation, BoolValue, Expression, Function, FunctionCall, FunctionId,
+        FunctionParameter, FunctionReturnType, Operation, Type, UIntValue, Value,
     };
 
     #[test]
@@ -217,6 +234,36 @@ mod tests {
                 Expression::ValueLiteral(Value::UInt(UIntValue(10))),
                 Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
             ],
+        };
+
+        let result = function_call.type_check(&functions, &HashMap::new());
+
+        assert!(matches!(result, Err(_)));
+    }
+
+    #[test]
+    fn function_call_type_check_parameter_expressions() {
+        let functions = HashMap::from_iter([(
+            FunctionId("my_function".to_owned()),
+            Function::CustomFunction {
+                id: FunctionId("my_function".to_owned()),
+                name: "my_function".to_owned(),
+                parameters: vec![FunctionParameter::FunctionParameter {
+                    param_type: Type::UInt,
+                    param_name: "hi".to_owned(),
+                }],
+                return_type: FunctionReturnType::Void,
+                body: Vec::new(),
+            },
+        )]);
+
+        let function_call = FunctionCall {
+            function_id: FunctionId("my_function".to_owned()),
+            parameters: vec![Expression::Operation(Operation::Binary {
+                operation: BinaryOperation::Plus,
+                left: Box::new(Expression::ValueLiteral(Value::Boolean(BoolValue(true)))),
+                right: Box::new(Expression::ValueLiteral(Value::UInt(UIntValue(10)))),
+            })],
         };
 
         let result = function_call.type_check(&functions, &HashMap::new());
