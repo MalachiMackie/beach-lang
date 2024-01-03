@@ -11,7 +11,7 @@ impl Expression {
     pub fn get_type(
         &self,
         functions: &HashMap<FunctionId, Function>,
-        local_variables: &HashMap<String, Expression>,
+        local_variables: &HashMap<String, Type>,
     ) -> Option<Type> {
         match self {
             Expression::ValueLiteral(value) => Some(value.get_type()),
@@ -24,16 +24,14 @@ impl Expression {
                 }
             }
             Expression::Operation(operation) => Some(operation.get_type()),
-            Expression::VariableAccess(var_name) => local_variables
-                .get(var_name)
-                .and_then(|x| x.get_type(functions, local_variables)),
+            Expression::VariableAccess(var_name) => local_variables.get(var_name).copied(),
         }
     }
 
     pub fn type_check(
         &self,
         functions: &HashMap<FunctionId, Function>,
-        local_variables: &HashMap<String, Expression>,
+        local_variables: &HashMap<String, Type>,
     ) -> Result<(), Vec<TypeCheckingError>> {
         match self {
             Expression::ValueLiteral(_) => Ok(()),
@@ -50,7 +48,7 @@ impl Expression {
 
 fn type_check_variable_access(
     var_name: &str,
-    local_variables: &HashMap<String, Expression>,
+    local_variables: &HashMap<String, Type>,
 ) -> Result<(), TypeCheckingError> {
     local_variables
         .get(var_name)
@@ -141,10 +139,7 @@ mod tests {
     fn expression_get_type_variable_access() {
         let expression = Expression::VariableAccess("my_var".to_owned());
 
-        let local_variables = HashMap::from_iter([(
-            "my_var".to_owned(),
-            Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
-        )]);
+        let local_variables = HashMap::from_iter([("my_var".to_owned(), Type::Boolean)]);
 
         let result = expression.get_type(&HashMap::new(), &local_variables);
 
@@ -162,10 +157,7 @@ mod tests {
 
     #[test]
     fn test_type_check_variable_access_success() {
-        let variables = HashMap::from_iter([(
-            "my_var".to_owned(),
-            Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
-        )]);
+        let variables = HashMap::from_iter([("my_var".to_owned(), Type::Boolean)]);
 
         let result = type_check_variable_access("my_var", &variables);
 
@@ -268,10 +260,7 @@ mod tests {
     fn expression_type_check_variable_access_successful() {
         let expression = Expression::VariableAccess("my_var".to_owned());
 
-        let local_variables = HashMap::from_iter([(
-            "my_var".to_owned(),
-            Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
-        )]);
+        let local_variables = HashMap::from_iter([("my_var".to_owned(), Type::Boolean)]);
 
         let result = expression.type_check(&HashMap::new(), &local_variables);
 

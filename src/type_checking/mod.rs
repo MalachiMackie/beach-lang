@@ -1,9 +1,10 @@
-use crate::ast::node::Type;
-
 mod expression;
+mod function_call;
+mod node;
 mod operation;
 mod value;
-mod function_call;
+
+use crate::ast::node::Type;
 
 #[derive(Debug)]
 pub struct TypeCheckingError {

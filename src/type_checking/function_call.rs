@@ -8,7 +8,7 @@ impl FunctionCall {
     pub(super) fn type_check(
         &self,
         functions: &HashMap<FunctionId, Function>,
-        local_variables: &HashMap<String, Expression>,
+        local_variables: &HashMap<String, Type>,
     ) -> Result<(), Vec<TypeCheckingError>> {
         let mut errors = Vec::new();
         let function = functions.get(&self.function_id);

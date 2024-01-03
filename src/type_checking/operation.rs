@@ -27,7 +27,7 @@ impl Operation {
     pub fn type_check(
         &self,
         functions: &HashMap<FunctionId, Function>,
-        local_variables: &HashMap<String, Expression>,
+        local_variables: &HashMap<String, Type>,
     ) -> Result<(), Vec<TypeCheckingError>> {
         match self {
             Operation::Unary { operation, value } => {
@@ -48,7 +48,7 @@ impl BinaryOperation {
         left: &Expression,
         right: &Expression,
         functions: &HashMap<FunctionId, Function>,
-        local_variables: &HashMap<String, Expression>,
+        local_variables: &HashMap<String, Type>,
     ) -> Result<(), Vec<TypeCheckingError>> {
         let mut errors = Vec::new();
 
@@ -90,7 +90,7 @@ impl UnaryOperation {
         &self,
         value: &Expression,
         functions: &HashMap<FunctionId, Function>,
-        local_variables: &HashMap<String, Expression>,
+        local_variables: &HashMap<String, Type>,
     ) -> Result<(), Vec<TypeCheckingError>> {
         let mut errors = Vec::new();
 
