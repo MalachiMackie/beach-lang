@@ -2,17 +2,18 @@ use std::collections::HashMap;
 
 use crate::ast::node::{Ast, Function, FunctionId, Node, Value};
 
-use super::{Functions, NodeResult};
+use super::{intrinsics::get_intrinsic_functions, Functions, NodeResult};
 
 impl Ast {
-    pub fn evaluate(
-        &self,
-        mut local_variables: HashMap<String, Value>,
-        mut functions: HashMap<FunctionId, Function>,
-    ) -> NodeResult {
+    pub fn evaluate(&self) -> NodeResult {
+        let functions = get_intrinsic_functions()
+            .into_iter()
+            .chain(self.functions.clone())
+            .collect();
+
         let mut call_stack: Vec<FunctionId> = Vec::new();
 
-        functions.extend(self.functions.clone());
+        let mut local_variables = HashMap::new();
 
         evaluate_nodes(
             &self.nodes,
@@ -132,25 +133,14 @@ mod tests {
             },
         )]);
 
-        let outer_functions = HashMap::from_iter([(
-            FunctionId("function_2".to_owned()),
-            Function::CustomFunction {
-                id: FunctionId("function_2".to_owned()),
-                name: "function_2".to_owned(),
-                parameters: Vec::new(),
-                return_type: FunctionReturnType::Void,
-                body: Vec::new(),
-            },
-        )]);
-
         let nodes = vec![
             Node::FunctionCall(FunctionCall {
                 function_id: FunctionId("function_1".to_owned()),
                 parameters: Vec::new(),
             }),
             Node::FunctionCall(FunctionCall {
-                function_id: FunctionId("function_2".to_owned()),
-                parameters: Vec::new(),
+                function_id: FunctionId("print".to_owned()),
+                parameters: vec![10.into()],
             }),
         ];
 
@@ -159,7 +149,7 @@ mod tests {
             nodes,
         };
 
-        let result = ast.evaluate(HashMap::new(), outer_functions);
+        let result = ast.evaluate();
 
         assert_eq!(result, NodeResult::None)
     }

@@ -1,14 +1,15 @@
+mod ast;
 mod expression;
+mod function_declaration;
 mod nodes;
 mod operation;
 mod value;
-mod function_declaration;
 
 use crate::ast::node::Type;
 
 #[derive(Debug)]
 pub struct TypeCheckingError {
-    message: String,
+    pub message: String,
 }
 
 fn verify_type(actual_type: Option<Type>, expected_type: Type) -> Result<(), TypeCheckingError> {

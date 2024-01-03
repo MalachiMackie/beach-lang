@@ -58,7 +58,9 @@ impl Node {
             Node::FunctionCall(function_call) => {
                 function_call.type_check(functions, local_variables)
             }
-            Node::IfStatement(_) => todo!(),
+            Node::IfStatement(if_statement) => {
+                if_statement.type_check(functions, local_variables, current_function)
+            }
         }
     }
 
@@ -123,9 +125,12 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::{
-        ast::node::{
-            Expression, Function, FunctionCall, FunctionId, FunctionReturnType, Node, Operation,
-            Type, UnaryOperation, VariableDeclarationType,
+        ast::{
+            builders::if_statement_builder::IfStatementBuilder,
+            node::{
+                Expression, Function, FunctionCall, FunctionId, FunctionReturnType, Node,
+                Operation, Type, UnaryOperation, VariableDeclarationType,
+            },
         },
         type_checking::nodes::node::type_check_nodes,
     };
@@ -275,5 +280,17 @@ mod tests {
         let result = type_check_nodes(&nodes, &HashMap::new(), &HashMap::new(), None);
 
         assert!(matches!(result, Err(e) if e.len() == 2));
+    }
+
+    #[test]
+    fn test_if_statement_type_checking() {
+        let node = IfStatementBuilder::new()
+            .check_expression(|_| true.into())
+            .body(|body| body.build())
+            .build();
+
+        let result = node.type_check(&HashMap::new(), &mut HashMap::new(), None);
+
+        assert!(matches!(result, Ok(())));
     }
 }

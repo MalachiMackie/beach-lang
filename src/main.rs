@@ -2,20 +2,25 @@ mod ast;
 pub mod evaluation;
 mod type_checking;
 
-use std::collections::HashMap;
-
 use ast::{
     builders::ast_builder::AstBuilder,
     node::{Ast, FunctionParameter},
 };
-use evaluation::intrinsics::get_intrinsic_functions;
 
 use crate::ast::node::Type;
 
 fn main() {
     let ast = fibonacci(AstBuilder::default());
 
-    ast.evaluate(HashMap::new(), get_intrinsic_functions());
+    if let Err(errors) = ast.type_check() {
+        for error in errors {
+            println!("{}", error.message);
+        }
+
+        return;
+    }
+
+    ast.evaluate();
 }
 
 fn fibonacci(ast_builder: AstBuilder) -> Ast {

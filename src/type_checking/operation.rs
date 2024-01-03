@@ -16,7 +16,7 @@ impl Operation {
             Operation::Binary {
                 operation: BinaryOperation::GreaterThan,
                 ..
-            } => Type::UInt,
+            } => Type::Boolean,
             Operation::Binary {
                 operation: BinaryOperation::Plus,
                 ..
@@ -164,7 +164,7 @@ mod tests {
 
         let result = operation.get_type();
 
-        assert_eq!(result, Type::UInt)
+        assert_eq!(result, Type::Boolean)
     }
 
     #[test]

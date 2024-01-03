@@ -41,10 +41,16 @@ mod tests {
         let function = Function::CustomFunction {
             id: FunctionId("my_function".to_owned()),
             name: "my_function".to_owned(),
-            parameters: vec![FunctionParameter::FunctionParameter {
-                param_type: Type::Boolean,
-                param_name: "my_var".to_owned(),
-            }],
+            parameters: vec![
+                FunctionParameter::FunctionParameter {
+                    param_type: Type::Boolean,
+                    param_name: "my_var".to_owned(),
+                },
+                // only here to get the test coverage
+                FunctionParameter::IntrinsicAny {
+                    param_name: "intrinsic_any".to_owned(),
+                },
+            ],
             return_type: FunctionReturnType::Type(Type::Boolean),
             body: vec![Node::FunctionReturn {
                 return_value: Some(Expression::VariableAccess("my_var".to_owned())),
