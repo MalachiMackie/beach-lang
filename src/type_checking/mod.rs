@@ -1,6 +1,6 @@
 mod expression;
 mod function_call;
-mod node;
+mod nodes;
 mod operation;
 mod value;
 
