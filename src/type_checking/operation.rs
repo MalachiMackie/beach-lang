@@ -133,7 +133,7 @@ mod tests {
     fn operation_get_type_not() {
         let operation = Operation::Unary {
             operation: UnaryOperation::Not,
-            value: Box::new(Expression::ValueLiteral(Value::Boolean(BoolValue(true)))),
+            value: Box::new(true.into()),
         };
 
         let result = operation.get_type();
@@ -145,8 +145,8 @@ mod tests {
     fn operation_get_type_plus() {
         let operation = Operation::Binary {
             operation: BinaryOperation::Plus,
-            left: Box::new(Expression::ValueLiteral(Value::UInt(UIntValue(10)))),
-            right: Box::new(Expression::ValueLiteral(Value::UInt(UIntValue(10)))),
+            left: Box::new(10.into()),
+            right: Box::new(10.into()),
         };
 
         let result = operation.get_type();
@@ -158,8 +158,8 @@ mod tests {
     fn operation_get_type_greater_than() {
         let operation = Operation::Binary {
             operation: BinaryOperation::GreaterThan,
-            left: Box::new(Expression::ValueLiteral(Value::UInt(UIntValue(10)))),
-            right: Box::new(Expression::ValueLiteral(Value::UInt(UIntValue(10)))),
+            left: Box::new(10.into()),
+            right: Box::new(10.into()),
         };
 
         let result = operation.get_type();
@@ -171,7 +171,7 @@ mod tests {
     fn operation_not_type_check_successful() {
         let operation = Operation::Unary {
             operation: UnaryOperation::Not,
-            value: Box::new(Expression::ValueLiteral(Value::Boolean(BoolValue(true)))),
+            value: Box::new(true.into()),
         };
 
         let result = operation.type_check(&HashMap::new(), &HashMap::new());
@@ -183,7 +183,7 @@ mod tests {
     fn operation_not_type_check_failure() {
         let operation = Operation::Unary {
             operation: UnaryOperation::Not,
-            value: Box::new(Expression::ValueLiteral(Value::UInt(UIntValue(10)))),
+            value: Box::new(10.into()),
         };
 
         let result = operation.type_check(&HashMap::new(), &HashMap::new());
@@ -195,8 +195,8 @@ mod tests {
     fn operation_plus_type_check_success() {
         let operation = Operation::Binary {
             operation: BinaryOperation::GreaterThan,
-            left: Box::new(Expression::ValueLiteral(Value::UInt(UIntValue(10)))),
-            right: Box::new(Expression::ValueLiteral(Value::UInt(UIntValue(10)))),
+            left: Box::new(10.into()),
+            right: Box::new(10.into()),
         };
 
         let result = operation.type_check(&HashMap::new(), &HashMap::new());
@@ -208,8 +208,8 @@ mod tests {
     fn operation_plus_type_check_failure() {
         let operation = Operation::Binary {
             operation: BinaryOperation::GreaterThan,
-            left: Box::new(Expression::ValueLiteral(Value::Boolean(BoolValue(true)))),
-            right: Box::new(Expression::ValueLiteral(Value::Boolean(BoolValue(true)))),
+            left: Box::new(true.into()),
+            right: Box::new(true.into()),
         };
 
         let result = operation.type_check(&HashMap::new(), &HashMap::new());

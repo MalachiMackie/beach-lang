@@ -60,9 +60,9 @@ mod tests {
     #[test]
     fn test_if_statement_true() {
         let if_statement = IfStatement {
-            check_expression: Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
+            check_expression: true.into(),
             if_block: vec![Node::FunctionReturn {
-                return_value: Some(Expression::ValueLiteral(Value::UInt(UIntValue(1)))),
+                return_value: Some(1.into()),
             }],
             else_if_blocks: Vec::new(),
             else_block: None,
@@ -73,7 +73,7 @@ mod tests {
         assert_eq!(
             result,
             NodeResult::FunctionReturn {
-                value: Some(Value::UInt(UIntValue(1)))
+                value: Some(1.into())
             }
         );
     }
@@ -81,9 +81,9 @@ mod tests {
     #[test]
     fn test_if_statement_false_no_else() {
         let if_statement = IfStatement {
-            check_expression: Expression::ValueLiteral(Value::Boolean(BoolValue(false))),
+            check_expression: false.into(),
             if_block: vec![Node::FunctionReturn {
-                return_value: Some(Expression::ValueLiteral(Value::UInt(UIntValue(1)))),
+                return_value: Some(1.into()),
             }],
             else_if_blocks: Vec::new(),
             else_block: None,
@@ -97,13 +97,13 @@ mod tests {
     #[test]
     fn test_if_statement_else() {
         let if_statement = IfStatement {
-            check_expression: Expression::ValueLiteral(Value::Boolean(BoolValue(false))),
+            check_expression: false.into(),
             if_block: vec![Node::FunctionReturn {
-                return_value: Some(Expression::ValueLiteral(Value::UInt(UIntValue(1)))),
+                return_value: Some(1.into()),
             }],
             else_if_blocks: Vec::new(),
             else_block: Some(vec![Node::FunctionReturn {
-                return_value: Some(Expression::ValueLiteral(Value::UInt(UIntValue(2)))),
+                return_value: Some(2.into()),
             }]),
         };
 
@@ -112,7 +112,7 @@ mod tests {
         assert_eq!(
             result,
             NodeResult::FunctionReturn {
-                value: Some(Value::UInt(UIntValue(2)))
+                value: Some(2.into())
             }
         )
     }
@@ -120,18 +120,18 @@ mod tests {
     #[test]
     fn test_else_if_statement() {
         let if_statement = IfStatement {
-            check_expression: Expression::ValueLiteral(Value::Boolean(BoolValue(false))),
+            check_expression: false.into(),
             if_block: vec![Node::FunctionReturn {
-                return_value: Some(Expression::ValueLiteral(Value::UInt(UIntValue(1)))),
+                return_value: Some(1.into()),
             }],
             else_if_blocks: vec![ElseIfBlock {
-                check: Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
+                check: true.into(),
                 block: vec![Node::FunctionReturn {
-                    return_value: Some(Expression::ValueLiteral(Value::UInt(UIntValue(3)))),
+                    return_value: Some(3.into()),
                 }],
             }],
             else_block: Some(vec![Node::FunctionReturn {
-                return_value: Some(Expression::ValueLiteral(Value::UInt(UIntValue(2)))),
+                return_value: Some(2.into()),
             }]),
         };
 
@@ -140,7 +140,7 @@ mod tests {
         assert_eq!(
             result,
             NodeResult::FunctionReturn {
-                value: Some(Value::UInt(UIntValue(3)))
+                value: Some(3.into())
             }
         )
     }
@@ -149,9 +149,9 @@ mod tests {
     #[should_panic]
     fn test_if_statement_incorrect_check() {
         let if_statement = IfStatement {
-            check_expression: Expression::ValueLiteral(Value::UInt(UIntValue(10))),
+            check_expression: 10.into(),
             if_block: vec![Node::FunctionReturn {
-                return_value: Some(Expression::ValueLiteral(Value::UInt(UIntValue(1)))),
+                return_value: Some(1.into()),
             }],
             else_if_blocks: Vec::new(),
             else_block: None,
@@ -164,14 +164,14 @@ mod tests {
     #[should_panic]
     fn test_else_if_statement_incorrect_check() {
         let if_statement = IfStatement {
-            check_expression: Expression::ValueLiteral(Value::Boolean(BoolValue(false))),
+            check_expression: false.into(),
             if_block: vec![Node::FunctionReturn {
-                return_value: Some(Expression::ValueLiteral(Value::UInt(UIntValue(1)))),
+                return_value: Some(1.into()),
             }],
             else_if_blocks: vec![ElseIfBlock {
-                check: Expression::ValueLiteral(Value::UInt(UIntValue(10))),
+                check: 10.into(),
                 block: vec![Node::FunctionReturn {
-                    return_value: Some(Expression::ValueLiteral(Value::UInt(UIntValue(3)))),
+                    return_value: Some(3.into()),
                 }],
             }],
             else_block: None,

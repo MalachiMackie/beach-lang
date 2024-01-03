@@ -1,6 +1,6 @@
 mod ast;
-mod type_checking;
 pub mod evaluation;
+mod type_checking;
 
 use std::collections::HashMap;
 
@@ -97,7 +97,7 @@ fn fibonacci(ast_builder: AstBuilder) -> Ast {
             statement.function_call(|function_call| {
                 function_call
                     .function_id("print")
-                    .parameter(|param| param.value_literal(Value::UInt(UIntValue(0))))
+                    .parameter(|param| param.value_literal(0.into()))
                     .build()
             })
         })
@@ -105,7 +105,7 @@ fn fibonacci(ast_builder: AstBuilder) -> Ast {
             statement.function_call(|function_call| {
                 function_call
                     .function_id("print")
-                    .parameter(|param| param.value_literal(Value::UInt(UIntValue(1))))
+                    .parameter(|param| param.value_literal(1.into()))
                     .build()
             })
         })
@@ -113,9 +113,9 @@ fn fibonacci(ast_builder: AstBuilder) -> Ast {
             statement.function_call(|function_call| {
                 function_call
                     .function_id("fibonacci")
-                    .parameter(|param| param.value_literal(Value::UInt(UIntValue(0))))
-                    .parameter(|param| param.value_literal(Value::UInt(UIntValue(1))))
-                    .parameter(|param| param.value_literal(Value::UInt(UIntValue(10000))))
+                    .parameter(|param| param.value_literal(0.into()))
+                    .parameter(|param| param.value_literal(1.into()))
+                    .parameter(|param| param.value_literal(10000.into()))
                     .build()
             })
         })

@@ -58,15 +58,13 @@ mod tests {
             var_declaration
                 .infer_type()
                 .name("my_var")
-                .with_assignment(|assignment| {
-                    assignment.value_literal(Value::Boolean(BoolValue(true)))
-                })
+                .with_assignment(|assignment| assignment.value_literal(true.into()))
         });
 
         let expected = Node::VariableDeclaration {
             var_type: crate::ast::node::VariableDeclarationType::Infer,
             var_name: "my_var".to_owned(),
-            value: Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
+            value: true.into(),
         };
 
         assert_eq!(actual, expected);
@@ -76,13 +74,13 @@ mod tests {
     fn if_statement() {
         let actual = StatementBuilder::default().if_statement(|if_statement| {
             if_statement
-                .check_expression(|check| check.value_literal(Value::Boolean(BoolValue(true))))
+                .check_expression(|check| check.value_literal(true.into()))
                 .body(|body| body.build())
                 .build()
         });
 
         let expected = Node::IfStatement(IfStatement {
-            check_expression: Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
+            check_expression: true.into(),
             if_block: Vec::new(),
             else_if_blocks: Vec::new(),
             else_block: None,
@@ -110,12 +108,11 @@ mod tests {
 
     #[test]
     fn return_value() {
-        let actual = StatementBuilder::default().return_value(|return_value| {
-            return_value.value_literal(Value::Boolean(BoolValue(true)))
-        });
+        let actual = StatementBuilder::default()
+            .return_value(|return_value| return_value.value_literal(true.into()));
 
         let expected = Node::FunctionReturn {
-            return_value: Some(Expression::ValueLiteral(Value::Boolean(BoolValue(true)))),
+            return_value: Some(true.into()),
         };
 
         assert_eq!(actual, expected);

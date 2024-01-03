@@ -72,20 +72,20 @@ mod tests {
                 }],
                 return_type: FunctionReturnType::Type(Type::UInt),
                 body: vec![Node::FunctionReturn {
-                    return_value: Some(Expression::ValueLiteral(Value::UInt(UIntValue(10)))),
+                    return_value: Some(10.into()),
                 }],
             },
         )]);
 
         let function_call = FunctionCall {
             function_id: FunctionId("my_function".to_owned()),
-            parameters: vec![Expression::ValueLiteral(Value::Boolean(BoolValue(true)))],
+            parameters: vec![true.into()],
         };
 
         let result =
             evaluate_function_call(&function_call, &functions, &HashMap::new(), &mut Vec::new());
 
-        assert_eq!(result, Value::UInt(UIntValue(10)))
+        assert_eq!(result, 10.into())
     }
 
     #[test]
@@ -107,7 +107,7 @@ mod tests {
 
         let function_call = FunctionCall {
             function_id: FunctionId("my_function".to_owned()),
-            parameters: vec![Expression::ValueLiteral(Value::Boolean(BoolValue(true)))],
+            parameters: vec![true.into()],
         };
 
         evaluate_function_call(&function_call, &functions, &HashMap::new(), &mut Vec::new());
@@ -115,13 +115,13 @@ mod tests {
 
     #[test]
     fn expression_value_literal() {
-        let result = Expression::ValueLiteral(Value::Boolean(BoolValue(true))).evaluate(
+        let result = Expression::ValueLiteral(true.into()).evaluate(
             &HashMap::new(),
             &HashMap::new(),
             &mut Vec::new(),
         );
 
-        assert_eq!(result, Value::Boolean(BoolValue(true)))
+        assert_eq!(result, true.into())
     }
 
     #[test]
@@ -137,42 +137,41 @@ mod tests {
                 }],
                 return_type: FunctionReturnType::Type(Type::UInt),
                 body: vec![Node::FunctionReturn {
-                    return_value: Some(Expression::ValueLiteral(Value::UInt(UIntValue(10)))),
+                    return_value: Some(10.into()),
                 }],
             },
         )]);
 
         let function_call = Expression::FunctionCall(FunctionCall {
             function_id: FunctionId("my_function".to_owned()),
-            parameters: vec![Expression::ValueLiteral(Value::Boolean(BoolValue(true)))],
+            parameters: vec![true.into()],
         });
 
         let result = function_call.evaluate(&functions, &HashMap::new(), &mut Vec::new());
 
-        assert_eq!(result, Value::UInt(UIntValue(10)));
+        assert_eq!(result, 10.into());
     }
 
     #[test]
     fn expression_operation() {
         let expression = Expression::Operation(Operation::Unary {
             operation: UnaryOperation::Not,
-            value: Box::new(Expression::ValueLiteral(Value::Boolean(BoolValue(true)))),
+            value: Box::new(true.into()),
         });
 
         let result = expression.evaluate(&HashMap::new(), &HashMap::new(), &mut Vec::new());
 
-        assert_eq!(result, Value::Boolean(BoolValue(false)));
+        assert_eq!(result, false.into());
     }
 
     #[test]
     fn expression_variable_access() {
         let expression = Expression::VariableAccess("my_var".to_owned());
 
-        let local_variables =
-            HashMap::from_iter([("my_var".to_owned(), Value::Boolean(BoolValue(true)))]);
+        let local_variables = HashMap::from_iter([("my_var".to_owned(), true.into())]);
 
         let result = expression.evaluate(&HashMap::new(), &local_variables, &mut Vec::new());
 
-        assert_eq!(result, Value::Boolean(BoolValue(true)));
+        assert_eq!(result, true.into());
     }
 }

@@ -96,129 +96,129 @@ mod tests {
 
     #[test]
     fn test_plus() {
-        let result = plus(Value::UInt(UIntValue(10)), Value::UInt(UIntValue(15)));
+        let result = plus(10.into(), 15.into());
 
-        assert_eq!(result, Value::UInt(UIntValue(25)));
+        assert_eq!(result, 25.into());
     }
 
     #[test]
     #[should_panic]
     fn test_plus_incorrect_left_value() {
-        plus(Value::Boolean(BoolValue(true)), Value::UInt(UIntValue(10)));
+        plus(true.into(), 10.into());
     }
 
     #[test]
     #[should_panic]
     fn test_plus_incorrect_right_value() {
-        plus(Value::UInt(UIntValue(10)), Value::Boolean(BoolValue(true)));
+        plus(10.into(), true.into());
     }
 
     #[test]
     fn test_greater_than_false() {
-        let result = greater_than(Value::UInt(UIntValue(10)), Value::UInt(UIntValue(15)));
+        let result = greater_than(10.into(), 15.into());
 
-        assert_eq!(result, Value::Boolean(BoolValue(false)));
+        assert_eq!(result, false.into());
     }
 
     #[test]
     fn test_greater_than_false_equal() {
-        let result = greater_than(Value::UInt(UIntValue(10)), Value::UInt(UIntValue(10)));
+        let result = greater_than(10.into(), 10.into());
 
-        assert_eq!(result, Value::Boolean(BoolValue(false)));
+        assert_eq!(result, false.into());
     }
 
     #[test]
     fn test_greater_than_true() {
-        let result = greater_than(Value::UInt(UIntValue(15)), Value::UInt(UIntValue(10)));
+        let result = greater_than(15.into(), 10.into());
 
-        assert_eq!(result, Value::Boolean(BoolValue(true)));
+        assert_eq!(result, true.into());
     }
 
     #[test]
     #[should_panic]
     fn test_greater_than_incorrect_left_value() {
-        greater_than(Value::Boolean(BoolValue(true)), Value::UInt(UIntValue(10)));
+        greater_than(true.into(), 10.into());
     }
 
     #[test]
     #[should_panic]
     fn test_greater_than_incorrect_right_value() {
-        greater_than(Value::UInt(UIntValue(10)), Value::Boolean(BoolValue(true)));
+        greater_than(10.into(), true.into());
     }
 
     #[test]
     fn test_binary_operation_plus() {
         let result = binary_operation(
             BinaryOperation::Plus,
-            &Expression::ValueLiteral(Value::UInt(UIntValue(10))),
-            &Expression::ValueLiteral(Value::UInt(UIntValue(10))),
+            &10.into(),
+            &10.into(),
             &HashMap::new(),
             &HashMap::new(),
             &mut Vec::new(),
         );
 
-        assert_eq!(result, Value::UInt(UIntValue(20)));
+        assert_eq!(result, 20.into());
     }
 
     #[test]
     fn test_binary_operation_greater_than() {
         let result = binary_operation(
             BinaryOperation::GreaterThan,
-            &Expression::ValueLiteral(Value::UInt(UIntValue(10))),
-            &Expression::ValueLiteral(Value::UInt(UIntValue(10))),
+            &10.into(),
+            &10.into(),
             &HashMap::new(),
             &HashMap::new(),
             &mut Vec::new(),
         );
 
-        assert_eq!(result, Value::Boolean(BoolValue(false)));
+        assert_eq!(result, false.into());
     }
 
     #[test]
     fn test_not() {
-        let result = not(Value::Boolean(BoolValue(true)));
-        assert_eq!(result, Value::Boolean(BoolValue(false)));
+        let result = not(true.into());
+        assert_eq!(result, false.into());
     }
 
     #[test]
     #[should_panic]
     fn test_not_incorrect_value() {
-        not(Value::UInt(UIntValue(10)));
+        not(10.into());
     }
 
     #[test]
     fn unary_operation_not() {
         let result = unary_operation(
             UnaryOperation::Not,
-            &Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
+            &true.into(),
             &HashMap::new(),
             &HashMap::new(),
             &mut Vec::new(),
         );
 
-        assert_eq!(result, Value::Boolean(BoolValue(false)));
+        assert_eq!(result, false.into());
     }
 
     #[test]
     fn evaluate_unary() {
         let result = Operation::Unary {
             operation: UnaryOperation::Not,
-            value: Box::new(Expression::ValueLiteral(Value::Boolean(BoolValue(true)))),
+            value: Box::new(true.into()),
         }
         .evaluate(&HashMap::new(), &HashMap::new(), &mut Vec::new());
 
-        assert_eq!(result, Value::Boolean(BoolValue(false)))
+        assert_eq!(result, false.into())
     }
 
     #[test]
     fn evaluate_binary() {
         let result = Operation::Binary {
             operation: BinaryOperation::Plus,
-            left: Box::new(Expression::ValueLiteral(Value::UInt(UIntValue(10)))),
-            right: Box::new(Expression::ValueLiteral(Value::UInt(UIntValue(10)))),
+            left: Box::new(10.into()),
+            right: Box::new(10.into()),
         }
         .evaluate(&HashMap::new(), &HashMap::new(), &mut Vec::new());
 
-        assert_eq!(result, Value::UInt(UIntValue(20)));
+        assert_eq!(result, 20.into());
     }
 }

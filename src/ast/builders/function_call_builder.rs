@@ -70,16 +70,13 @@ mod tests {
     fn function_call_parameter() {
         let actual = FunctionCallBuilder::new()
             .function_id("my_function")
-            .parameter(|param| param.value_literal(Value::Boolean(BoolValue(true))))
-            .parameter(|param| param.value_literal(Value::UInt(UIntValue(10))))
+            .parameter(|param| param.value_literal(true.into()))
+            .parameter(|param| param.value_literal(10.into()))
             .build();
 
         let expected = FunctionCall {
             function_id: FunctionId("my_function".to_owned()),
-            parameters: vec![
-                Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
-                Expression::ValueLiteral(Value::UInt(UIntValue(10))),
-            ],
+            parameters: vec![true.into(), 10.into()],
         };
 
         assert_eq!(actual, expected);

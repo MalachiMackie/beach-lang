@@ -62,7 +62,7 @@ mod tests {
         let node = Node::VariableDeclaration {
             var_type: VariableDeclarationType::Infer,
             var_name: "my_var".to_owned(),
-            value: Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
+            value: true.into(),
         };
 
         let mut local_variables = HashMap::new();
@@ -73,14 +73,14 @@ mod tests {
 
         assert_eq!(
             local_variables,
-            HashMap::from_iter([("my_var".to_owned(), Value::Boolean(BoolValue(true)))])
+            HashMap::from_iter([("my_var".to_owned(), true.into())])
         );
     }
 
     #[test]
     fn test_function_return_with_value() {
         let node = Node::FunctionReturn {
-            return_value: Some(Expression::ValueLiteral(Value::Boolean(BoolValue(true)))),
+            return_value: Some(true.into()),
         };
 
         let result = node.evaluate(&mut HashMap::new(), &mut Vec::new(), &HashMap::new());
@@ -88,7 +88,7 @@ mod tests {
         assert_eq!(
             result,
             NodeResult::FunctionReturn {
-                value: Some(Value::Boolean(BoolValue(true)))
+                value: Some(true.into())
             }
         );
     }
@@ -128,9 +128,9 @@ mod tests {
     #[test]
     fn test_if_statement_return() {
         let node = Node::IfStatement(IfStatement {
-            check_expression: Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
+            check_expression: true.into(),
             if_block: vec![Node::FunctionReturn {
-                return_value: Some(Expression::ValueLiteral(Value::UInt(UIntValue(10)))),
+                return_value: Some(10.into()),
             }],
             else_if_blocks: Vec::new(),
             else_block: None,
@@ -141,7 +141,7 @@ mod tests {
         assert_eq!(
             result,
             NodeResult::FunctionReturn {
-                value: Some(Value::UInt(UIntValue(10)))
+                value: Some(10.into())
             }
         );
     }
@@ -149,7 +149,7 @@ mod tests {
     #[test]
     fn test_if_statement_no_return() {
         let node = Node::IfStatement(IfStatement {
-            check_expression: Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
+            check_expression: true.into(),
             if_block: Vec::new(),
             else_if_blocks: Vec::new(),
             else_block: None,

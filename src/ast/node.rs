@@ -57,7 +57,8 @@ pub enum FunctionParameter {
 impl FunctionParameter {
     pub fn name(&self) -> &str {
         match self {
-            FunctionParameter::IntrinsicAny { param_name } | FunctionParameter::FunctionParameter { param_name, .. } => &param_name
+            FunctionParameter::IntrinsicAny { param_name }
+            | FunctionParameter::FunctionParameter { param_name, .. } => &param_name,
         }
     }
 }
@@ -79,6 +80,18 @@ pub enum Expression {
     VariableAccess(String),
 }
 
+impl From<bool> for Expression {
+    fn from(value: bool) -> Self {
+        Expression::ValueLiteral(value.into())
+    }
+}
+
+impl From<u32> for Expression {
+    fn from(value: u32) -> Self {
+        Expression::ValueLiteral(value.into())
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct FunctionCall {
     pub function_id: FunctionId,
@@ -98,6 +111,18 @@ impl Display for FunctionId {
 pub enum Value {
     UInt(UIntValue),
     Boolean(BoolValue),
+}
+
+impl From<bool> for Value {
+    fn from(value: bool) -> Self {
+        Value::Boolean(value.into())
+    }
+}
+
+impl From<u32> for Value {
+    fn from(value: u32) -> Self {
+        Value::UInt(value.into())
+    }
 }
 
 impl Value {
@@ -144,8 +169,20 @@ impl Display for Type {
 #[derive(Clone, Debug, PartialEq)]
 pub struct UIntValue(pub u32);
 
+impl From<u32> for UIntValue {
+    fn from(value: u32) -> Self {
+        UIntValue(value)
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct BoolValue(pub bool);
+
+impl From<bool> for BoolValue {
+    fn from(value: bool) -> Self {
+        BoolValue(value)
+    }
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Operation {

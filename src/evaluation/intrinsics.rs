@@ -58,9 +58,7 @@ mod tests {
     fn evaluate_print_bool() {
         let result = evaluate_intrinsic_function(
             &FunctionId("print".to_owned()),
-            &[("value".to_owned(), Value::Boolean(BoolValue(true)))]
-                .into_iter()
-                .collect(),
+            &[("value".to_owned(), true.into())].into_iter().collect(),
         );
 
         assert!(matches!(result, None));
@@ -70,9 +68,7 @@ mod tests {
     fn evaluate_print_uint() {
         let result = evaluate_intrinsic_function(
             &FunctionId("print".to_owned()),
-            &[("value".to_owned(), Value::UInt(UIntValue(10)))]
-                .into_iter()
-                .collect(),
+            &[("value".to_owned(), 10.into())].into_iter().collect(),
         );
 
         assert!(matches!(result, None));

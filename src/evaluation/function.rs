@@ -83,14 +83,14 @@ mod tests {
         let result = evaluate_custom_function(
             &FunctionId("my_function".to_owned()),
             &[Node::FunctionReturn {
-                return_value: Some(Expression::ValueLiteral(Value::UInt(UIntValue(1)))),
+                return_value: Some(1.into()),
             }],
             HashMap::new(),
             &mut Vec::new(),
             &HashMap::new(),
         );
 
-        assert_eq!(result, Some(Value::UInt(UIntValue(1))))
+        assert_eq!(result, Some(1.into()))
     }
 
     #[test]
@@ -117,18 +117,18 @@ mod tests {
             }],
             return_type: FunctionReturnType::Type(Type::Boolean),
             body: vec![Node::FunctionReturn {
-                return_value: Some(Expression::ValueLiteral(Value::Boolean(BoolValue(true)))),
+                return_value: Some(true.into()),
             }],
         };
 
         let result = function.evaluate(
-            vec![Expression::ValueLiteral(Value::UInt(UIntValue(1)))],
+            vec![1.into()],
             &HashMap::new(),
             &HashMap::new(),
             &mut Vec::new(),
         );
 
-        assert_eq!(result, Some(Value::Boolean(BoolValue(true))))
+        assert_eq!(result, Some(true.into()))
     }
 
     #[test]
@@ -143,7 +143,7 @@ mod tests {
         };
 
         let result = function.evaluate(
-            vec![Expression::ValueLiteral(Value::UInt(UIntValue(1)))],
+            vec![1.into()],
             &HashMap::new(),
             &HashMap::new(),
             &mut Vec::new(),
@@ -161,17 +161,17 @@ mod tests {
             parameters: Vec::new(),
             return_type: FunctionReturnType::Type(Type::Boolean),
             body: vec![Node::FunctionReturn {
-                return_value: Some(Expression::ValueLiteral(Value::Boolean(BoolValue(true)))),
+                return_value: Some(true.into()),
             }],
         };
 
         let result = function.evaluate(
-            vec![Expression::ValueLiteral(Value::UInt(UIntValue(1)))],
+            vec![1.into()],
             &HashMap::new(),
             &HashMap::new(),
             &mut Vec::new(),
         );
 
-        assert_eq!(result, Some(Value::Boolean(BoolValue(true))))
+        assert_eq!(result, Some(true.into()))
     }
 }

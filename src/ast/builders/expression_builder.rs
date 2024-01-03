@@ -69,9 +69,9 @@ mod tests {
 
     #[test]
     fn value_literal() {
-        let actual = ExpressionBuilder::default().value_literal(Value::Boolean(BoolValue(true)));
+        let actual = ExpressionBuilder::default().value_literal(true.into());
 
-        let expected = Expression::ValueLiteral(Value::Boolean(BoolValue(true)));
+        let expected = true.into();
 
         assert_eq!(actual, expected);
     }
@@ -79,12 +79,12 @@ mod tests {
     #[test]
     fn operation() {
         let actual = ExpressionBuilder::default().operation(|operation| {
-            operation.not(|not| not.value_literal(Value::Boolean(BoolValue(true))))
+            operation.not(|not| not.value_literal(true.into()))
         });
 
         let expected = Expression::Operation(Operation::Unary {
             operation: UnaryOperation::Not,
-            value: Box::new(Expression::ValueLiteral(Value::Boolean(BoolValue(true)))),
+            value: Box::new(true.into()),
         });
 
         assert_eq!(actual, expected);

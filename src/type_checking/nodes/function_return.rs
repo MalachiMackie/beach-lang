@@ -98,7 +98,7 @@ mod tests {
     #[test]
     fn type_check_return_value_successful_empty_call_stack() {
         let node = Node::FunctionReturn {
-            return_value: Some(Expression::ValueLiteral(Value::UInt(UIntValue(10)))),
+            return_value: Some(10.into()),
         };
 
         let result = node.type_check(&HashMap::new(), &mut HashMap::new(), None);
@@ -124,7 +124,7 @@ mod tests {
     #[test]
     fn type_check_return_value_successful_in_function() {
         let node = Node::FunctionReturn {
-            return_value: Some(Expression::ValueLiteral(Value::Boolean(BoolValue(true)))),
+            return_value: Some(true.into()),
         };
 
         let functions = HashMap::from_iter([(
@@ -178,8 +178,8 @@ mod tests {
         let node = Node::FunctionReturn {
             return_value: Some(Expression::Operation(Operation::Binary {
                 operation: BinaryOperation::Plus,
-                left: Box::new(Expression::ValueLiteral(Value::UInt(UIntValue(10)))),
-                right: Box::new(Expression::ValueLiteral(Value::Boolean(BoolValue(true)))),
+                left: Box::new(10.into()),
+                right: Box::new(true.into()),
             })),
         };
 
@@ -193,7 +193,7 @@ mod tests {
     #[test]
     fn type_check_return_top_level_incorrect_type() {
         let node = Node::FunctionReturn {
-            return_value: Some(Expression::ValueLiteral(Value::Boolean(BoolValue(true)))),
+            return_value: Some(true.into()),
         };
 
         let result = node.type_check(&HashMap::new(), &mut HashMap::new(), None);
@@ -206,7 +206,7 @@ mod tests {
     #[test]
     fn type_check_return_incorrect_value_from_function() {
         let node = Node::FunctionReturn {
-            return_value: Some(Expression::ValueLiteral(Value::Boolean(BoolValue(true)))),
+            return_value: Some(true.into()),
         };
 
         let functions = HashMap::from_iter([(
@@ -260,7 +260,7 @@ mod tests {
     #[test]
     fn type_check_return_value_from_void_function() {
         let node = Node::FunctionReturn {
-            return_value: Some(Expression::ValueLiteral(Value::Boolean(BoolValue(true)))),
+            return_value: Some(true.into()),
         };
 
         let functions = HashMap::from_iter([(

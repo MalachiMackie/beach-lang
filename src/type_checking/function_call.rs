@@ -157,7 +157,7 @@ mod tests {
 
         let function_call = FunctionCall {
             function_id: FunctionId("my_function".to_owned()),
-            parameters: vec![Expression::ValueLiteral(Value::Boolean(BoolValue(true)))],
+            parameters: vec![true.into()],
         };
 
         let result = function_call.type_check(&functions, &HashMap::new());
@@ -190,8 +190,8 @@ mod tests {
         let function_call = FunctionCall {
             function_id: FunctionId("my_function".to_owned()),
             parameters: vec![
-                Expression::ValueLiteral(Value::UInt(UIntValue(10))),
-                Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
+                10.into(),
+                true.into(),
             ],
         };
 
@@ -204,7 +204,7 @@ mod tests {
     fn function_call_type_check_missing_function() {
         let function_call = FunctionCall {
             function_id: FunctionId("my_function".to_owned()),
-            parameters: vec![Expression::ValueLiteral(Value::UInt(UIntValue(10)))],
+            parameters: vec![10.into()],
         };
 
         let result = function_call.type_check(&HashMap::new(), &HashMap::new());
@@ -231,8 +231,8 @@ mod tests {
         let function_call = FunctionCall {
             function_id: FunctionId("my_function".to_owned()),
             parameters: vec![
-                Expression::ValueLiteral(Value::UInt(UIntValue(10))),
-                Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
+                10.into(),
+                true.into(),
             ],
         };
 
@@ -261,8 +261,8 @@ mod tests {
             function_id: FunctionId("my_function".to_owned()),
             parameters: vec![Expression::Operation(Operation::Binary {
                 operation: BinaryOperation::Plus,
-                left: Box::new(Expression::ValueLiteral(Value::Boolean(BoolValue(true)))),
-                right: Box::new(Expression::ValueLiteral(Value::UInt(UIntValue(10)))),
+                left: Box::new(true.into()),
+                right: Box::new(10.into()),
             })],
         };
 

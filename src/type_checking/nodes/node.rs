@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 
-use crate::{ast::node::{
-    Expression, Function, FunctionId, Node, Type, VariableDeclarationType,
-}, type_checking::{TypeCheckingError, verify_type}};
+use crate::{
+    ast::node::{Expression, Function, FunctionId, Node, Type, VariableDeclarationType},
+    type_checking::{verify_type, TypeCheckingError},
+};
 
 use super::function_return::type_check_return_value;
 
@@ -116,17 +117,20 @@ impl Node {
 mod tests {
     use std::collections::HashMap;
 
-    use crate::{ast::node::{
-        BoolValue, Expression, Function, FunctionCall, FunctionId, FunctionReturnType, Node,
-        Operation, Type, UIntValue, UnaryOperation, Value, VariableDeclarationType,
-    }, type_checking::nodes::node::NodeTypeCheckResult};
+    use crate::{
+        ast::node::{
+            BoolValue, Expression, Function, FunctionCall, FunctionId, FunctionReturnType, Node,
+            Operation, Type, UIntValue, UnaryOperation, Value, VariableDeclarationType,
+        },
+        type_checking::nodes::node::NodeTypeCheckResult,
+    };
 
     #[test]
     fn type_check_variable_declaration_success() {
         let node = Node::VariableDeclaration {
             var_type: VariableDeclarationType::Type(Type::Boolean),
             var_name: "my_var".to_owned(),
-            value: Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
+            value: true.into(),
         };
 
         let mut local_variables = HashMap::new();
@@ -146,7 +150,7 @@ mod tests {
         let node = Node::VariableDeclaration {
             var_type: VariableDeclarationType::Infer,
             var_name: "my_var".to_owned(),
-            value: Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
+            value: true.into(),
         };
 
         let mut local_variables = HashMap::new();
@@ -166,7 +170,7 @@ mod tests {
         let node = Node::VariableDeclaration {
             var_type: VariableDeclarationType::Type(Type::Boolean),
             var_name: "my_name".to_owned(),
-            value: Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
+            value: true.into(),
         };
 
         let mut local_variables = HashMap::from_iter([("my_name".to_owned(), Type::UInt)]);
@@ -188,7 +192,7 @@ mod tests {
             var_name: "my_name".to_owned(),
             value: Expression::Operation(Operation::Unary {
                 operation: UnaryOperation::Not,
-                value: Box::new(Expression::ValueLiteral(Value::UInt(UIntValue(10)))),
+                value: Box::new(10.into()),
             }),
         };
 
@@ -234,7 +238,7 @@ mod tests {
         let node = Node::VariableDeclaration {
             var_type: VariableDeclarationType::Type(Type::UInt),
             var_name: "my_value".to_owned(),
-            value: Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
+            value: true.into(),
         };
 
         let result = node.type_check(&HashMap::new(), &mut HashMap::new(), None);

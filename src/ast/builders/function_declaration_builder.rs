@@ -84,7 +84,7 @@ mod tests {
                             .declare_type(Type::Boolean)
                             .name("my_var_name")
                             .with_assignment(|expression_builder| {
-                                expression_builder.value_literal(Value::Boolean(BoolValue(true)))
+                                expression_builder.value_literal(true.into())
                             })
                     })
                 })
@@ -101,7 +101,7 @@ mod tests {
             body: vec![Node::VariableDeclaration {
                 var_type: VariableDeclarationType::Type(Type::Boolean),
                 var_name: "my_var_name".to_owned(),
-                value: Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
+                value: true.into(),
             }],
         };
 
@@ -116,9 +116,7 @@ mod tests {
             .return_type(Type::UInt)
             .body(|body| {
                 body.statement(|statement| {
-                    statement.return_value(|return_value| {
-                        return_value.value_literal(Value::UInt(UIntValue(10)))
-                    })
+                    statement.return_value(|return_value| return_value.value_literal(10.into()))
                 })
             });
 
@@ -128,7 +126,7 @@ mod tests {
             parameters: Vec::new(),
             return_type: FunctionReturnType::Type(Type::UInt),
             body: vec![Node::FunctionReturn {
-                return_value: Some(Expression::ValueLiteral(Value::UInt(UIntValue(10)))),
+                return_value: Some(10.into()),
             }],
         };
 

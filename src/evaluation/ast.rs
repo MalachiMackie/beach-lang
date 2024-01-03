@@ -60,7 +60,7 @@ mod tests {
             Node::VariableDeclaration {
                 var_type: VariableDeclarationType::Infer,
                 var_name: "my_var".to_owned(),
-                value: Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
+                value: true.into(),
             },
             Node::FunctionCall(FunctionCall {
                 function_id: FunctionId("my_function".to_owned()),
@@ -93,10 +93,10 @@ mod tests {
             Node::VariableDeclaration {
                 var_type: VariableDeclarationType::Infer,
                 var_name: "my_var".to_owned(),
-                value: Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
+                value: true.into(),
             },
             Node::IfStatement(IfStatement {
-                check_expression: Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
+                check_expression: true.into(),
                 if_block: vec![Node::FunctionReturn {
                     return_value: Some(Expression::VariableAccess("my_var".to_owned())),
                 }],
@@ -105,7 +105,7 @@ mod tests {
             }),
             // extra return to check we return out early if we get a return value
             Node::FunctionReturn {
-                return_value: Some(Expression::ValueLiteral(Value::Boolean(BoolValue(false)))),
+                return_value: Some(false.into()),
             },
         ];
 
@@ -114,7 +114,7 @@ mod tests {
         assert_eq!(
             result,
             NodeResult::FunctionReturn {
-                value: Some(Value::Boolean(BoolValue(true)))
+                value: Some(true.into())
             }
         );
     }

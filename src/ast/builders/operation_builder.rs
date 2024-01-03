@@ -51,12 +51,12 @@ mod tests {
 
     fn not_operation() {
         let result = OperationBuilder::default().not(|not_expression_builder| {
-            not_expression_builder.value_literal(Value::Boolean(BoolValue(true)))
+            not_expression_builder.value_literal(true.into())
         });
 
         let expected = Operation::Unary {
             operation: UnaryOperation::Not,
-            value: Box::new(Expression::ValueLiteral(Value::Boolean(BoolValue(true)))),
+            value: Box::new(true.into()),
         };
 
         assert_eq!(result, expected);
@@ -65,14 +65,14 @@ mod tests {
     #[test]
     fn greater_than_operation() {
         let result = OperationBuilder::default().greater_than(
-            |left| left.value_literal(Value::UInt(UIntValue(10))),
-            |right| right.value_literal(Value::UInt(UIntValue(12))),
+            |left| left.value_literal(10.into()),
+            |right| right.value_literal(12.into()),
         );
 
         let expected = Operation::Binary {
             operation: BinaryOperation::GreaterThan,
-            left: Box::new(Expression::ValueLiteral(Value::UInt(UIntValue(10)))),
-            right: Box::new(Expression::ValueLiteral(Value::UInt(UIntValue(12)))),
+            left: Box::new(10.into()),
+            right: Box::new(12.into()),
         };
 
         assert_eq!(result, expected);
@@ -81,14 +81,14 @@ mod tests {
     #[test]
     fn plus_than_operation() {
         let result = OperationBuilder::default().plus(
-            |left| left.value_literal(Value::UInt(UIntValue(10))),
-            |right| right.value_literal(Value::UInt(UIntValue(12))),
+            |left| left.value_literal(10.into()),
+            |right| right.value_literal(12.into()),
         );
 
         let expected = Operation::Binary {
             operation: BinaryOperation::Plus,
-            left: Box::new(Expression::ValueLiteral(Value::UInt(UIntValue(10)))),
-            right: Box::new(Expression::ValueLiteral(Value::UInt(UIntValue(12)))),
+            left: Box::new(10.into()),
+            right: Box::new(12.into()),
         };
 
         assert_eq!(result, expected);

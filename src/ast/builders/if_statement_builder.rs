@@ -86,7 +86,7 @@ mod tests {
     #[test]
     fn if_statement() {
         let actual = IfStatementBuilder::new()
-            .check_expression(|check| check.value_literal(Value::Boolean(BoolValue(true))))
+            .check_expression(|check| check.value_literal(true.into()))
             .body(|body| {
                 body.statement(|statement| {
                     statement.function_call(|function_call| {
@@ -101,7 +101,7 @@ mod tests {
             .build();
 
         let expected = Node::IfStatement(IfStatement {
-            check_expression: Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
+            check_expression: true.into(),
             if_block: vec![Node::FunctionCall(FunctionCall {
                 function_id: FunctionId("my_function".to_owned()),
                 parameters: Vec::new(),
@@ -116,7 +116,7 @@ mod tests {
     #[test]
     fn else_if_statement() {
         let actual = IfStatementBuilder::new()
-            .check_expression(|check| check.value_literal(Value::Boolean(BoolValue(true))))
+            .check_expression(|check| check.value_literal(true.into()))
             .body(|body| {
                 body.statement(|statement| {
                     statement.function_call(|function_call| {
@@ -129,7 +129,7 @@ mod tests {
                 .build()
             })
             .else_if(
-                |check| check.value_literal(Value::Boolean(BoolValue(true))),
+                |check| check.value_literal(true.into()),
                 |body| {
                     body.statement(|statement| {
                         statement.function_call(|function_call| {
@@ -145,14 +145,14 @@ mod tests {
             .build();
 
         let expected = Node::IfStatement(IfStatement {
-            check_expression: Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
+            check_expression: true.into(),
             if_block: vec![Node::FunctionCall(FunctionCall {
                 function_id: FunctionId("my_function".to_owned()),
                 parameters: Vec::new(),
             })],
             else_block: None,
             else_if_blocks: vec![ElseIfBlock {
-                check: Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
+                check: true.into(),
                 block: vec![Node::FunctionCall(FunctionCall {
                     function_id: FunctionId("my_function".to_owned()),
                     parameters: Vec::new(),
@@ -166,7 +166,7 @@ mod tests {
     #[test]
     fn else_statement() {
         let actual = IfStatementBuilder::new()
-            .check_expression(|check| check.value_literal(Value::Boolean(BoolValue(true))))
+            .check_expression(|check| check.value_literal(true.into()))
             .body(|body| {
                 body.statement(|statement| {
                     statement.function_call(|function_call| {
@@ -192,7 +192,7 @@ mod tests {
             .build();
 
         let expected = Node::IfStatement(IfStatement {
-            check_expression: Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
+            check_expression: true.into(),
             if_block: vec![Node::FunctionCall(FunctionCall {
                 function_id: FunctionId("my_function".to_owned()),
                 parameters: Vec::new(),

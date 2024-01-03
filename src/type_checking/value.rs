@@ -15,14 +15,14 @@ mod tests {
 
     #[test]
     fn value_get_type_uint() {
-        let result = Value::UInt(UIntValue(10)).get_type();
+        let result = Value::UInt(10.into()).get_type();
 
         assert_eq!(result, Type::UInt)
     }
 
     #[test]
     fn value_get_type_boolean() {
-        let result = Value::Boolean(BoolValue(true)).get_type();
+        let result = Value::Boolean(true.into()).get_type();
 
         assert_eq!(result, Type::Boolean)
     }

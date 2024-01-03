@@ -53,14 +53,12 @@ mod tests {
         let result = VariableDeclarationBuilder::default()
             .declare_type(Type::Boolean)
             .name("my_var_name")
-            .with_assignment(|expression_builder| {
-                expression_builder.value_literal(Value::Boolean(BoolValue(true)))
-            });
+            .with_assignment(|expression_builder| expression_builder.value_literal(true.into()));
 
         let expected = Node::VariableDeclaration {
             var_type: VariableDeclarationType::Type(Type::Boolean),
             var_name: "my_var_name".to_owned(),
-            value: Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
+            value: true.into(),
         };
 
         assert_eq!(result, expected);
@@ -71,14 +69,12 @@ mod tests {
         let result = VariableDeclarationBuilder::default()
             .infer_type()
             .name("my_var_name")
-            .with_assignment(|expression_builder| {
-                expression_builder.value_literal(Value::Boolean(BoolValue(true)))
-            });
+            .with_assignment(|expression_builder| expression_builder.value_literal(true.into()));
 
         let expected = Node::VariableDeclaration {
             var_type: VariableDeclarationType::Infer,
             var_name: "my_var_name".to_owned(),
-            value: Expression::ValueLiteral(Value::Boolean(BoolValue(true))),
+            value: true.into(),
         };
 
         assert_eq!(result, expected);

@@ -5,7 +5,7 @@ use crate::ast::node::{
     Value,
 };
 
-use super::{verify_type, TypeCheckingError};
+use super::TypeCheckingError;
 
 impl Expression {
     pub fn get_type(
@@ -71,8 +71,8 @@ mod tests {
 
     #[test]
     fn expression_get_type_value_literal() {
-        let result = Expression::ValueLiteral(Value::Boolean(BoolValue(true)))
-            .get_type(&HashMap::new(), &HashMap::new());
+        let expression: Expression = true.into();
+        let result = expression.get_type(&HashMap::new(), &HashMap::new());
 
         assert_eq!(result, Some(Type::Boolean));
     }
@@ -81,7 +81,7 @@ mod tests {
     fn expression_get_type_operation() {
         let expression = Expression::Operation(Operation::Unary {
             operation: UnaryOperation::Not,
-            value: Box::new(Expression::ValueLiteral(Value::Boolean(BoolValue(true)))),
+            value: Box::new(true.into()),
         });
 
         let result = expression.get_type(&HashMap::new(), &HashMap::new());
@@ -176,7 +176,7 @@ mod tests {
 
     #[test]
     fn expression_type_check_value_literal() {
-        let expression = Expression::ValueLiteral(Value::Boolean(BoolValue(true)));
+        let expression: Expression = true.into();
 
         let result = expression.type_check(&HashMap::new(), &HashMap::new());
 
@@ -236,7 +236,7 @@ mod tests {
     fn expression_type_check_operation_successful() {
         let expression = Expression::Operation(Operation::Unary {
             operation: UnaryOperation::Not,
-            value: Box::new(Expression::ValueLiteral(Value::Boolean(BoolValue(true)))),
+            value: Box::new(true.into()),
         });
 
         let result = expression.type_check(&HashMap::new(), &HashMap::new());
@@ -248,7 +248,7 @@ mod tests {
     fn expression_type_check_operation_failure() {
         let expression = Expression::Operation(Operation::Unary {
             operation: UnaryOperation::Not,
-            value: Box::new(Expression::ValueLiteral(Value::UInt(UIntValue(10)))),
+            value: Box::new(10.into()),
         });
 
         let result = expression.type_check(&HashMap::new(), &HashMap::new());
