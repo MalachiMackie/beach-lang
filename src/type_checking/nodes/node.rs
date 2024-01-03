@@ -11,16 +11,22 @@ pub fn type_check_nodes(
     nodes: &[Node],
     functions: &HashMap<FunctionId, Function>,
     local_variables: &HashMap<String, Type>,
+    current_function: Option<&FunctionId>,
 ) -> Result<(), Vec<TypeCheckingError>> {
-    // todo
-    Ok(())
-}
+    let mut errors = Vec::new();
+    let mut local_variables = local_variables.clone();
+    for node in nodes {
+        if let Err(node_errors) = node.type_check(functions, &mut local_variables, current_function)
+        {
+            errors.extend(node_errors);
+        }
+    }
 
-#[derive(Debug)]
-pub enum NodeTypeCheckResult {
-    ReturnedFromFunction(Result<(), Vec<TypeCheckingError>>),
-    // gross name
-    DidNotReturnedFromFunction(Result<(), Vec<TypeCheckingError>>),
+    if errors.is_empty() {
+        Ok(())
+    } else {
+        Err(errors)
+    }
 }
 
 impl Node {
@@ -29,32 +35,29 @@ impl Node {
         functions: &HashMap<FunctionId, Function>,
         local_variables: &mut HashMap<String, Type>,
         current_function: Option<&FunctionId>,
-    ) -> NodeTypeCheckResult {
+    ) -> Result<(), Vec<TypeCheckingError>> {
         match self {
             Node::VariableDeclaration {
                 var_type,
                 var_name,
                 value,
-            } => NodeTypeCheckResult::DidNotReturnedFromFunction(
-                Self::type_check_variable_declaration(
-                    var_name,
-                    var_type,
-                    value,
-                    functions,
-                    local_variables,
-                ),
+            } => Self::type_check_variable_declaration(
+                var_name,
+                var_type,
+                value,
+                functions,
+                local_variables,
             ),
-            Node::FunctionReturn { return_value } => {
-                NodeTypeCheckResult::ReturnedFromFunction(type_check_return_value(
-                    return_value.as_ref(),
-                    functions,
-                    local_variables,
-                    current_function,
-                ))
+
+            Node::FunctionReturn { return_value } => type_check_return_value(
+                return_value.as_ref(),
+                functions,
+                local_variables,
+                current_function,
+            ),
+            Node::FunctionCall(function_call) => {
+                function_call.type_check(functions, local_variables)
             }
-            Node::FunctionCall(function_call) => NodeTypeCheckResult::DidNotReturnedFromFunction(
-                function_call.type_check(functions, local_variables),
-            ),
             Node::IfStatement(_) => todo!(),
         }
     }
@@ -124,7 +127,7 @@ mod tests {
             Expression, Function, FunctionCall, FunctionId, FunctionReturnType, Node, Operation,
             Type, UnaryOperation, VariableDeclarationType,
         },
-        type_checking::nodes::node::NodeTypeCheckResult,
+        type_checking::nodes::node::type_check_nodes,
     };
 
     #[test]
@@ -139,10 +142,7 @@ mod tests {
 
         let result = node.type_check(&HashMap::new(), &mut local_variables, None);
 
-        assert!(matches!(
-            result,
-            NodeTypeCheckResult::DidNotReturnedFromFunction(Ok(_))
-        ));
+        assert!(matches!(result, Ok(_)));
 
         assert!(matches!(local_variables.get("my_var"), Some(Type::Boolean)));
     }
@@ -159,10 +159,7 @@ mod tests {
 
         let result = node.type_check(&HashMap::new(), &mut local_variables, None);
 
-        assert!(matches!(
-            result,
-            NodeTypeCheckResult::DidNotReturnedFromFunction(Ok(_))
-        ));
+        assert!(matches!(result, Ok(_)));
 
         assert!(matches!(local_variables.get("my_var"), Some(Type::Boolean)));
     }
@@ -180,7 +177,7 @@ mod tests {
         let result = node.type_check(&HashMap::new(), &mut local_variables, None);
 
         assert!(
-            matches!(result, NodeTypeCheckResult::DidNotReturnedFromFunction(Err(e)) if e.len() == 1 && e[0].message == "Variable my_name is already defined".to_owned())
+            matches!(result, Err(e) if e.len() == 1 && e[0].message == "Variable my_name is already defined".to_owned())
         );
 
         // verify variable type wasn't overwritten
@@ -200,10 +197,7 @@ mod tests {
 
         let result = node.type_check(&HashMap::new(), &mut HashMap::new(), None);
 
-        assert!(matches!(
-            result,
-            NodeTypeCheckResult::DidNotReturnedFromFunction(Err(_))
-        ))
+        assert!(matches!(result, Err(_)))
     }
 
     #[test]
@@ -231,7 +225,7 @@ mod tests {
         let result = node.type_check(&functions, &mut HashMap::new(), None);
 
         assert!(
-            matches!(result, NodeTypeCheckResult::DidNotReturnedFromFunction(Err(e)) if e.len() == 1 && e[0].message == "cannot assign void to variable my_value".to_owned())
+            matches!(result, Err(e) if e.len() == 1 && e[0].message == "cannot assign void to variable my_value".to_owned())
         )
     }
 
@@ -246,7 +240,40 @@ mod tests {
         let result = node.type_check(&HashMap::new(), &mut HashMap::new(), None);
 
         assert!(
-            matches!(result, NodeTypeCheckResult::DidNotReturnedFromFunction(Err(e)) if e.len() == 1 && e[0].message == "Expected type to be UInt, but found Boolean".to_owned())
+            matches!(result, Err(e) if e.len() == 1 && e[0].message == "Expected type to be UInt, but found Boolean".to_owned())
         )
+    }
+
+    #[test]
+    fn type_check_nodes_successful() {
+        let nodes = vec![Node::VariableDeclaration {
+            var_type: VariableDeclarationType::Infer,
+            var_name: "my_var".to_owned(),
+            value: true.into(),
+        }];
+
+        let result = type_check_nodes(&nodes, &HashMap::new(), &HashMap::new(), None);
+
+        assert!(matches!(result, Ok(())));
+    }
+
+    #[test]
+    fn type_check_nodes_multiple_errors() {
+        let nodes = vec![
+            Node::VariableDeclaration {
+                var_type: VariableDeclarationType::Type(Type::Boolean),
+                var_name: "var_1".to_owned(),
+                value: 32.into(),
+            },
+            Node::VariableDeclaration {
+                var_type: VariableDeclarationType::Type(Type::Boolean),
+                var_name: "var_2".to_owned(),
+                value: 32.into(),
+            },
+        ];
+
+        let result = type_check_nodes(&nodes, &HashMap::new(), &HashMap::new(), None);
+
+        assert!(matches!(result, Err(e) if e.len() == 2));
     }
 }

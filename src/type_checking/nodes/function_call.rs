@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    ast::node::{Expression, Function, FunctionCall, FunctionId, FunctionParameter, Type},
+    ast::node::{Function, FunctionCall, FunctionId, FunctionParameter, Type},
     type_checking::{verify_type, TypeCheckingError},
 };
 
@@ -89,10 +89,10 @@ impl FunctionParameter {
 mod tests {
     use std::collections::HashMap;
 
-    use crate::{ast::node::{
-        BinaryOperation, BoolValue, Expression, Function, FunctionCall, FunctionId,
-        FunctionParameter, FunctionReturnType, Node, Operation, Type, UIntValue, Value,
-    }, type_checking::nodes::node::NodeTypeCheckResult};
+    use crate::ast::node::{
+        BinaryOperation, Expression, Function, FunctionCall, FunctionId, FunctionParameter,
+        FunctionReturnType, Node, Operation, Type,
+    };
 
     #[test]
     fn function_parameter_verify_success() {
@@ -163,7 +163,7 @@ mod tests {
 
         let result = function_call.type_check(&functions, &mut HashMap::new(), None);
 
-        assert!(matches!(result, NodeTypeCheckResult::DidNotReturnedFromFunction(Ok(()))));
+        assert!(matches!(result, Ok(())));
     }
 
     #[test]
@@ -195,7 +195,7 @@ mod tests {
 
         let result = function_call.type_check(&functions, &mut HashMap::new(), None);
 
-        assert!(matches!(result, NodeTypeCheckResult::DidNotReturnedFromFunction(Err(e)) if e.len() == 2));
+        assert!(matches!(result, Err(e) if e.len() == 2));
     }
 
     #[test]
@@ -207,7 +207,7 @@ mod tests {
 
         let result = function_call.type_check(&HashMap::new(), &mut HashMap::new(), None);
 
-        assert!(matches!(result, NodeTypeCheckResult::DidNotReturnedFromFunction(Err(_))))
+        assert!(matches!(result, Err(_)))
     }
 
     #[test]
@@ -233,7 +233,7 @@ mod tests {
 
         let result = function_call.type_check(&functions, &mut HashMap::new(), None);
 
-        assert!(matches!(result, NodeTypeCheckResult::DidNotReturnedFromFunction(Err(_))));
+        assert!(matches!(result, Err(_)));
     }
 
     #[test]
@@ -263,6 +263,6 @@ mod tests {
 
         let result = function_call.type_check(&functions, &mut HashMap::new(), None);
 
-        assert!(matches!(result, NodeTypeCheckResult::DidNotReturnedFromFunction(Err(_))));
+        assert!(matches!(result, Err(_)));
     }
 }

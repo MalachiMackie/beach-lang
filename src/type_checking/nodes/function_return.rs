@@ -87,12 +87,9 @@ pub(super) fn type_check_return_value(
 mod tests {
     use std::collections::HashMap;
 
-    use crate::{
-        ast::node::{
-            BinaryOperation, Expression, Function, FunctionId, FunctionReturnType, Node, Operation,
-            Type,
-        },
-        type_checking::nodes::node::NodeTypeCheckResult,
+    use crate::ast::node::{
+        BinaryOperation, Expression, Function, FunctionId, FunctionReturnType, Node, Operation,
+        Type,
     };
 
     #[test]
@@ -103,10 +100,7 @@ mod tests {
 
         let result = node.type_check(&HashMap::new(), &mut HashMap::new(), None);
 
-        assert!(matches!(
-            result,
-            NodeTypeCheckResult::ReturnedFromFunction(Ok(()))
-        ))
+        assert!(matches!(result, Ok(())))
     }
 
     #[test]
@@ -115,10 +109,7 @@ mod tests {
 
         let result = node.type_check(&HashMap::new(), &mut HashMap::new(), None);
 
-        assert!(matches!(
-            result,
-            NodeTypeCheckResult::ReturnedFromFunction(Ok(()))
-        ))
+        assert!(matches!(result, Ok(())))
     }
 
     #[test]
@@ -142,10 +133,7 @@ mod tests {
 
         let result = node.type_check(&functions, &mut HashMap::new(), Some(&current_function));
 
-        assert!(matches!(
-            result,
-            NodeTypeCheckResult::ReturnedFromFunction(Ok(()))
-        ))
+        assert!(matches!(result, Ok(())))
     }
 
     #[test]
@@ -167,10 +155,7 @@ mod tests {
 
         let result = node.type_check(&functions, &mut HashMap::new(), Some(&current_function));
 
-        assert!(matches!(
-            result,
-            NodeTypeCheckResult::ReturnedFromFunction(Ok(()))
-        ));
+        assert!(matches!(result, Ok(())));
     }
 
     #[test]
@@ -186,7 +171,7 @@ mod tests {
         let result = node.type_check(&HashMap::new(), &mut HashMap::new(), None);
 
         assert!(
-            matches!(result, NodeTypeCheckResult::ReturnedFromFunction(Err(e)) if e.len() == 1 && e[0].message == "Expected type to be UInt, but found Boolean")
+            matches!(result, Err(e) if e.len() == 1 && e[0].message == "Expected type to be UInt, but found Boolean")
         );
     }
 
@@ -199,7 +184,7 @@ mod tests {
         let result = node.type_check(&HashMap::new(), &mut HashMap::new(), None);
 
         assert!(
-            matches!(result, NodeTypeCheckResult::ReturnedFromFunction(Err(e)) if e.len() == 1 && e[0].message == "Cannot return a Boolean from a top level statement")
+            matches!(result, Err(e) if e.len() == 1 && e[0].message == "Cannot return a Boolean from a top level statement")
         );
     }
 
@@ -227,7 +212,7 @@ mod tests {
         );
 
         assert!(
-            matches!(result, NodeTypeCheckResult::ReturnedFromFunction(Err(e)) if e.len() == 1 && e[0].message == "my_function expects a return type of UInt, but you returned a Boolean value")
+            matches!(result, Err(e) if e.len() == 1 && e[0].message == "my_function expects a return type of UInt, but you returned a Boolean value")
         )
     }
 
@@ -253,7 +238,7 @@ mod tests {
         );
 
         assert!(
-            matches!(result, NodeTypeCheckResult::ReturnedFromFunction(Err(e)) if e.len() == 1 && e[0].message == "my_function expects a return type of UInt, but you returned void")
+            matches!(result, Err(e) if e.len() == 1 && e[0].message == "my_function expects a return type of UInt, but you returned void")
         );
     }
 
@@ -281,7 +266,7 @@ mod tests {
         );
 
         assert!(
-            matches!(result, NodeTypeCheckResult::ReturnedFromFunction(Err(e)) if e.len() == 1 && e[0].message == "my_function is a void function, but you returned a Boolean value")
+            matches!(result, Err(e) if e.len() == 1 && e[0].message == "my_function is a void function, but you returned a Boolean value")
         );
     }
 }
