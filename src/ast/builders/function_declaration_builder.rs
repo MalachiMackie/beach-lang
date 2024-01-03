@@ -67,7 +67,7 @@ impl FunctionDeclarationBuilder {
 
 #[cfg(test)]
 mod tests {
-    use crate::ast::node::{BoolValue, Expression, UIntValue, Value, VariableDeclarationType};
+    use crate::ast::node::VariableDeclarationType;
 
     use super::*;
 

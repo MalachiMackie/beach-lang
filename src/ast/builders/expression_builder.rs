@@ -36,7 +36,7 @@ impl ExpressionBuilder {
 #[cfg(test)]
 mod tests {
     use crate::ast::node::{
-        BoolValue, Expression, FunctionCall, FunctionId, Operation, UnaryOperation, Value,
+        Expression, FunctionCall, FunctionId, Operation, UnaryOperation,
     };
 
     use super::ExpressionBuilder;

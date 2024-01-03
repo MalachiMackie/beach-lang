@@ -78,9 +78,7 @@ impl IfStatementBuilder {
 mod tests {
     use crate::ast::{
         builders::if_statement_builder::IfStatementBuilder,
-        node::{
-            BoolValue, ElseIfBlock, Expression, FunctionCall, FunctionId, IfStatement, Node, Value,
-        },
+        node::{ElseIfBlock, FunctionCall, FunctionId, IfStatement, Node},
     };
 
     #[test]

@@ -43,16 +43,13 @@ impl OperationBuilder {
 
 #[cfg(test)]
 mod tests {
-    use crate::ast::node::{BoolValue, UIntValue, Value};
-
     use super::*;
 
     #[test]
 
     fn not_operation() {
-        let result = OperationBuilder::default().not(|not_expression_builder| {
-            not_expression_builder.value_literal(true.into())
-        });
+        let result = OperationBuilder::default()
+            .not(|not_expression_builder| not_expression_builder.value_literal(true.into()));
 
         let expected = Operation::Unary {
             operation: UnaryOperation::Not,

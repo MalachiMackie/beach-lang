@@ -125,8 +125,8 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::ast::node::{
-        BinaryOperation, BoolValue, Expression, Function, FunctionCall, FunctionId,
-        FunctionParameter, FunctionReturnType, Operation, Type, UIntValue, UnaryOperation, Value,
+        BinaryOperation, Expression, Function, FunctionCall, FunctionId, FunctionParameter,
+        FunctionReturnType, Operation, Type, UnaryOperation,
     };
 
     #[test]

@@ -10,7 +10,7 @@ use ast::{
 };
 use evaluation::intrinsics::get_intrinsic_functions;
 
-use crate::ast::node::{Type, UIntValue, Value};
+use crate::ast::node::Type;
 
 fn main() {
     let ast = fibonacci(AstBuilder::default());

@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 
 use crate::ast::node::{
-    Expression, Function, FunctionCall, FunctionId, FunctionParameter, FunctionReturnType, Type,
-    Value,
+    Expression, Function, FunctionId, FunctionReturnType, Type,
 };
 
 use super::TypeCheckingError;
@@ -63,8 +62,8 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::ast::node::{
-        BoolValue, Expression, Function, FunctionCall, FunctionId, FunctionParameter,
-        FunctionReturnType, Operation, Type, UIntValue, UnaryOperation, Value,
+        Expression, Function, FunctionCall, FunctionId, FunctionParameter,
+        FunctionReturnType, Operation, Type, UnaryOperation,
     };
 
     use super::type_check_variable_access;

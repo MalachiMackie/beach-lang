@@ -11,7 +11,7 @@ impl Value {
 
 #[cfg(test)]
 mod tests {
-    use crate::ast::node::{BoolValue, Type, UIntValue, Value};
+    use crate::ast::node::{Type, Value};
 
     #[test]
     fn value_get_type_uint() {

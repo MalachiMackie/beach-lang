@@ -49,7 +49,7 @@ impl StatementBuilder {
 mod tests {
     use crate::ast::{
         builders::statement_builder::StatementBuilder,
-        node::{BoolValue, Expression, FunctionCall, FunctionId, IfStatement, Node, Value},
+        node::{FunctionCall, FunctionId, IfStatement, Node},
     };
 
     #[test]

@@ -47,7 +47,7 @@ impl FunctionCallBuilder {
 
 #[cfg(test)]
 mod tests {
-    use crate::ast::node::{BoolValue, FunctionId, UIntValue, Value};
+    use crate::ast::node::FunctionId;
 
     use super::*;
 
