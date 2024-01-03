@@ -89,8 +89,8 @@ mod tests {
 
     use crate::{
         ast::node::{
-            BinaryOperation, BoolValue, Expression, Function, FunctionId, FunctionReturnType, Node,
-            Operation, Type, UIntValue, UnaryOperation, Value,
+            BinaryOperation, Expression, Function, FunctionId, FunctionReturnType, Node, Operation,
+            Type,
         },
         type_checking::nodes::node::NodeTypeCheckResult,
     };

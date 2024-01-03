@@ -52,7 +52,9 @@ impl Node {
                     current_function,
                 ))
             }
-            Node::FunctionCall(_) => todo!(),
+            Node::FunctionCall(function_call) => NodeTypeCheckResult::DidNotReturnedFromFunction(
+                function_call.type_check(functions, local_variables),
+            ),
             Node::IfStatement(_) => todo!(),
         }
     }
@@ -119,8 +121,8 @@ mod tests {
 
     use crate::{
         ast::node::{
-            BoolValue, Expression, Function, FunctionCall, FunctionId, FunctionReturnType, Node,
-            Operation, Type, UIntValue, UnaryOperation, Value, VariableDeclarationType,
+            Expression, Function, FunctionCall, FunctionId, FunctionReturnType, Node, Operation,
+            Type, UnaryOperation, VariableDeclarationType,
         },
         type_checking::nodes::node::NodeTypeCheckResult,
     };

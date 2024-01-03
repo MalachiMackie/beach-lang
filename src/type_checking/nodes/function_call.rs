@@ -1,11 +1,12 @@
 use std::collections::HashMap;
 
-use crate::ast::node::{Expression, Function, FunctionCall, FunctionId, FunctionParameter, Type};
-
-use super::{verify_type, TypeCheckingError};
+use crate::{
+    ast::node::{Expression, Function, FunctionCall, FunctionId, FunctionParameter, Type},
+    type_checking::{verify_type, TypeCheckingError},
+};
 
 impl FunctionCall {
-    pub(super) fn type_check(
+    pub fn type_check(
         &self,
         functions: &HashMap<FunctionId, Function>,
         local_variables: &HashMap<String, Type>,
@@ -88,10 +89,10 @@ impl FunctionParameter {
 mod tests {
     use std::collections::HashMap;
 
-    use crate::ast::node::{
+    use crate::{ast::node::{
         BinaryOperation, BoolValue, Expression, Function, FunctionCall, FunctionId,
-        FunctionParameter, FunctionReturnType, Operation, Type, UIntValue, Value,
-    };
+        FunctionParameter, FunctionReturnType, Node, Operation, Type, UIntValue, Value,
+    }, type_checking::nodes::node::NodeTypeCheckResult};
 
     #[test]
     fn function_parameter_verify_success() {
@@ -155,14 +156,14 @@ mod tests {
             },
         )]);
 
-        let function_call = FunctionCall {
+        let function_call = Node::FunctionCall(FunctionCall {
             function_id: FunctionId("my_function".to_owned()),
             parameters: vec![true.into()],
-        };
+        });
 
-        let result = function_call.type_check(&functions, &HashMap::new());
+        let result = function_call.type_check(&functions, &mut HashMap::new(), None);
 
-        assert!(matches!(result, Ok(())));
+        assert!(matches!(result, NodeTypeCheckResult::DidNotReturnedFromFunction(Ok(()))));
     }
 
     #[test]
@@ -187,29 +188,26 @@ mod tests {
             },
         )]);
 
-        let function_call = FunctionCall {
+        let function_call = Node::FunctionCall(FunctionCall {
             function_id: FunctionId("my_function".to_owned()),
-            parameters: vec![
-                10.into(),
-                true.into(),
-            ],
-        };
+            parameters: vec![10.into(), true.into()],
+        });
 
-        let result = function_call.type_check(&functions, &HashMap::new());
+        let result = function_call.type_check(&functions, &mut HashMap::new(), None);
 
-        assert!(matches!(result, Err(e) if e.len() == 2));
+        assert!(matches!(result, NodeTypeCheckResult::DidNotReturnedFromFunction(Err(e)) if e.len() == 2));
     }
 
     #[test]
     fn function_call_type_check_missing_function() {
-        let function_call = FunctionCall {
+        let function_call = Node::FunctionCall(FunctionCall {
             function_id: FunctionId("my_function".to_owned()),
             parameters: vec![10.into()],
-        };
+        });
 
-        let result = function_call.type_check(&HashMap::new(), &HashMap::new());
+        let result = function_call.type_check(&HashMap::new(), &mut HashMap::new(), None);
 
-        assert!(matches!(result, Err(_)))
+        assert!(matches!(result, NodeTypeCheckResult::DidNotReturnedFromFunction(Err(_))))
     }
 
     #[test]
@@ -228,17 +226,14 @@ mod tests {
             },
         )]);
 
-        let function_call = FunctionCall {
+        let function_call = Node::FunctionCall(FunctionCall {
             function_id: FunctionId("my_function".to_owned()),
-            parameters: vec![
-                10.into(),
-                true.into(),
-            ],
-        };
+            parameters: vec![10.into(), true.into()],
+        });
 
-        let result = function_call.type_check(&functions, &HashMap::new());
+        let result = function_call.type_check(&functions, &mut HashMap::new(), None);
 
-        assert!(matches!(result, Err(_)));
+        assert!(matches!(result, NodeTypeCheckResult::DidNotReturnedFromFunction(Err(_))));
     }
 
     #[test]
@@ -257,17 +252,17 @@ mod tests {
             },
         )]);
 
-        let function_call = FunctionCall {
+        let function_call = Node::FunctionCall(FunctionCall {
             function_id: FunctionId("my_function".to_owned()),
             parameters: vec![Expression::Operation(Operation::Binary {
                 operation: BinaryOperation::Plus,
                 left: Box::new(true.into()),
                 right: Box::new(10.into()),
             })],
-        };
+        });
 
-        let result = function_call.type_check(&functions, &HashMap::new());
+        let result = function_call.type_check(&functions, &mut HashMap::new(), None);
 
-        assert!(matches!(result, Err(_)));
+        assert!(matches!(result, NodeTypeCheckResult::DidNotReturnedFromFunction(Err(_))));
     }
 }
