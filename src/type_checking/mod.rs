@@ -2,6 +2,7 @@ mod expression;
 mod nodes;
 mod operation;
 mod value;
+mod function_declaration;
 
 use crate::ast::node::Type;
 

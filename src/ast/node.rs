@@ -151,7 +151,7 @@ pub enum VariableDeclarationType {
     Type(Type),
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Type {
     UInt,
     Boolean,
