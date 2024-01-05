@@ -13,12 +13,12 @@ use crate::ast::{
     node::{Expression, Node, Type, Value, VariableDeclarationType},
 };
 
-#[derive(Clone, Copy, PartialEq, Debug)]
-pub enum Token<'code> {
+#[derive(Clone, PartialEq, Debug)]
+pub enum Token {
     FunctionKeyword,
-    Identifier(&'code str),
+    Identifier(String),
     LeftParenthesis,
-    RightParanthesis,
+    RightParenthesis,
     UIntValue(u32),
     TypeKeyword(Type),
     TrueKeyword,
@@ -36,7 +36,7 @@ pub enum Token<'code> {
     ReturnKeyword,
 }
 
-impl<'a> Display for Token<'a> {
+impl Display for Token {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("{:?}", self))
     }
@@ -48,10 +48,10 @@ pub struct TokenStreamError {
 }
 
 impl AstBuilder {
-    pub fn from_token_stream(tokens: &[Token]) -> Result<Self, Vec<TokenStreamError>> {
+    pub fn from_token_stream(tokens: Vec<Token>) -> Result<Self, Vec<TokenStreamError>> {
         let mut errors = Vec::new();
         let mut builder = AstBuilder::default();
-        let mut tokens_iter = tokens.iter().copied();
+        let mut tokens_iter = tokens.into_iter();
         while let Some(next_token) = tokens_iter.next() {
             match next_token {
                 Token::FunctionKeyword => todo!("function_declaration"),
@@ -86,10 +86,10 @@ impl AstBuilder {
     }
 }
 
-fn try_start_statement<'a>(
-    first_token: Token<'a>,
-    mut tokens_iter: &mut impl Iterator<Item = Token<'a>>,
-) -> Result<impl FnOnce(StatementBuilder) -> Node + 'a, Vec<TokenStreamError>> {
+fn try_start_statement(
+    first_token: Token,
+    mut tokens_iter: &mut impl Iterator<Item = Token>,
+) -> Result<impl FnOnce(StatementBuilder) -> Node, Vec<TokenStreamError>> {
     match first_token {
         // variable declaration
         Token::TypeKeyword(_) | Token::InferKeyword => {
@@ -127,10 +127,10 @@ fn try_start_statement<'a>(
     }
 }
 
-fn try_create_variable_declaration<'a>(
-    keyword: Token<'a>,
-    tokens: Vec<Token<'a>>,
-) -> Result<impl FnOnce(VariableDeclarationBuilder) -> Node + 'a, Vec<TokenStreamError>> {
+fn try_create_variable_declaration(
+    keyword: Token,
+    tokens: Vec<Token>,
+) -> Result<impl FnOnce(VariableDeclarationBuilder) -> Node, Vec<TokenStreamError>> {
     let var_decl_type = match keyword {
         Token::InferKeyword => VariableDeclarationType::Infer,
         Token::TypeKeyword(found_type) => VariableDeclarationType::Type(found_type),
@@ -178,35 +178,102 @@ enum ExpressionType {
     VariableAccess,
 }
 
-fn try_create_expression<'a>(
-    mut tokens_iter: impl Iterator<Item = Token<'a>>,
+fn try_create_expression(
+    mut tokens_iter: impl Iterator<Item = Token>,
 ) -> Result<Box<dyn FnOnce(ExpressionBuilder) -> Expression>, Vec<TokenStreamError>> {
-    if matches!(tokens_iter.next(), Some(Token::TrueKeyword)) {
-        Ok(Box::new(|builder: ExpressionBuilder| {
-            builder.value_literal(true.into())
-        }))
-    } else {
-        Ok(Box::new(|_| todo!()))
+    let (expression, next_token) = match take_expression(&mut tokens_iter) {
+        Err(errors) => return Err(errors),
+        Ok(value) => value,
+    };
+
+    match next_token.or_else(|| tokens_iter.next()) {
+        None => return Ok(expression),
+        _ => todo!(),
+    }
+
+    // if matches!(tokens_iter.next(), Some(Token::TrueKeyword)) {
+    //     Ok(Box::new(|builder: ExpressionBuilder| {
+    //         builder.value_literal(true.into())
+    //     }))
+    // } else {
+    //     Ok(Box::new(|_| todo!()))
+    // }
+}
+
+fn take_expression(
+    mut tokens_iter: &mut impl Iterator<Item = Token>,
+) -> Result<
+    (
+        Box<dyn FnOnce(ExpressionBuilder) -> Expression>,
+        Option<Token>,
+    ),
+    Vec<TokenStreamError>,
+> {
+    let identifier = match tokens_iter.next() {
+        Some(Token::FalseKeyword) => {
+            return Ok((
+                Box::new(|builder: ExpressionBuilder| builder.value_literal(false.into())),
+                None,
+            ))
+        }
+        Some(Token::TrueKeyword) => {
+            return Ok((
+                Box::new(|builder: ExpressionBuilder| builder.value_literal(true.into())),
+                None,
+            ))
+        }
+        Some(Token::UIntValue(value)) => {
+            return Ok((
+                Box::new(move |builder: ExpressionBuilder| builder.value_literal(value.into())),
+                None,
+            ))
+        }
+        Some(Token::Identifier(identifier)) => identifier.to_owned(),
+        Some(token) => {
+            return Err(vec![TokenStreamError {
+                message: format!("unexpected token {:?}", token),
+            }])
+        }
+        None => {
+            return Err(vec![TokenStreamError {
+                message: "unexpected end of tokens".to_owned(),
+            }])
+        }
+    };
+
+    match tokens_iter.next() {
+        None => Ok((
+            Box::new(move |builder: ExpressionBuilder| builder.variable(identifier.as_str())),
+            None,
+        )),
+        Some(Token::LeftParenthesis) => todo!("function call"),
+        Some(token) => Ok((
+            Box::new(move |builder: ExpressionBuilder| builder.variable(identifier.as_str())),
+            Some(token),
+        )),
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::ast::builders::ast_builder::AstBuilder;
+    use crate::ast::{
+        builders::ast_builder::AstBuilder,
+        node::{Function, Type},
+    };
 
     use super::Token;
 
     #[test]
     fn infer_boolean_variable_declaration_from_token_stream() {
-        let tokens = [
+        let tokens = vec![
             Token::InferKeyword,
-            Token::Identifier("my_var"),
+            Token::Identifier("my_var".to_owned()),
             Token::AssignmentOperator,
             Token::TrueKeyword,
             Token::SemiColon,
         ];
 
-        let result = AstBuilder::from_token_stream(&tokens);
+        let result = AstBuilder::from_token_stream(tokens);
 
         let expected = AstBuilder::default().statement(|statement| {
             statement.var_declaration(|var_decl| {
@@ -217,6 +284,30 @@ mod tests {
             })
         });
 
-        assert!(matches!(dbg!(result), Ok(ast_builder) if ast_builder == expected));
+        assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
+    }
+
+    #[test]
+    fn infer_variable_declaration_assign_variable_name() {
+        let tokens = vec![
+            Token::TypeKeyword(Type::Boolean),
+            Token::Identifier("my_var".to_owned()),
+            Token::AssignmentOperator,
+            Token::Identifier("my_other_var".to_owned()),
+            Token::SemiColon,
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        let expected = AstBuilder::default().statement(|statement| {
+            statement.var_declaration(|var_decl| {
+                var_decl
+                    .name("my_var")
+                    .declare_type(Type::Boolean)
+                    .with_assignment(|value| value.variable("my_other_var"))
+            })
+        });
+
+        assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
     }
 }
