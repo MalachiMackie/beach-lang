@@ -72,8 +72,7 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::ast::node::{
-        BoolValue, Expression, Function, FunctionId, FunctionParameter, FunctionReturnType, Node,
-        Type, UIntValue, Value,
+        Function, FunctionId, FunctionParameter, FunctionReturnType, Node, Type,
     };
 
     use super::evaluate_custom_function;

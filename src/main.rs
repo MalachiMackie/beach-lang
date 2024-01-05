@@ -1,5 +1,6 @@
 mod ast;
-pub mod evaluation;
+mod evaluation;
+mod token_stream;
 mod type_checking;
 
 use ast::{
@@ -23,6 +24,22 @@ fn main() {
     ast.evaluate();
 }
 
+/// function fibonnacci(uint lower, uint higher, uint limit) -> uint
+/// {
+///     infer next = lower + higher;
+///     if (next > limit)
+///     {
+///         return;
+///     }
+///
+///     print(next);
+///
+///     fibonnacci(higher, next, limit);
+/// }
+///
+/// print(0);
+/// print(1);
+/// fibonnacci(0, 1, 10000);
 fn fibonacci(ast_builder: AstBuilder) -> Ast {
     ast_builder
         .function_declaration(|function_declaration| {

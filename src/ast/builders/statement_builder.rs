@@ -16,7 +16,7 @@ impl StatementBuilder {
 
     pub fn var_declaration(
         self,
-        var_declaration_fn: impl Fn(VariableDeclarationBuilder) -> Node,
+        var_declaration_fn: impl FnOnce(VariableDeclarationBuilder) -> Node,
     ) -> Node {
         var_declaration_fn(VariableDeclarationBuilder {
             var_name: None,

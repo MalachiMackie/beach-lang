@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::ast::node::{Ast, Function, FunctionId, Node, Value};
+use crate::ast::node::{Ast, FunctionId, Node, Value};
 
 use super::{intrinsics::get_intrinsic_functions, Functions, NodeResult};
 
@@ -47,8 +47,8 @@ mod tests {
 
     use crate::{
         ast::node::{
-            Ast, BoolValue, Expression, Function, FunctionCall, FunctionId, FunctionParameter,
-            FunctionReturnType, IfStatement, Node, Type, Value, VariableDeclarationType,
+            Ast, Expression, Function, FunctionCall, FunctionId, FunctionParameter,
+            FunctionReturnType, IfStatement, Node, Type, VariableDeclarationType,
         },
         evaluation::NodeResult,
     };

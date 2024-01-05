@@ -53,7 +53,7 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::{
-        ast::node::{BoolValue, ElseIfBlock, Expression, IfStatement, Node, UIntValue, Value},
+        ast::node::{ElseIfBlock, IfStatement, Node},
         evaluation::NodeResult,
     };
 

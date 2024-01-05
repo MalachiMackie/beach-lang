@@ -24,7 +24,7 @@ impl VariableDeclarationBuilder {
         self
     }
 
-    pub fn with_assignment<TExpressionFn: Fn(ExpressionBuilder) -> Expression>(
+    pub fn with_assignment<TExpressionFn: FnOnce(ExpressionBuilder) -> Expression>(
         self,
         value_fn: TExpressionFn,
     ) -> Node {

@@ -86,9 +86,7 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::{
-        ast::node::{
-            BinaryOperation, BoolValue, Expression, Operation, UIntValue, UnaryOperation, Value,
-        },
+        ast::node::{BinaryOperation, Operation, UnaryOperation},
         evaluation::operation::greater_than,
     };
 

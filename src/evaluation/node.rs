@@ -51,8 +51,8 @@ mod tests {
 
     use crate::{
         ast::node::{
-            BoolValue, Expression, Function, FunctionCall, FunctionId, FunctionReturnType,
-            IfStatement, Node, UIntValue, Value, VariableDeclarationType,
+            Function, FunctionCall, FunctionId, FunctionReturnType, IfStatement, Node,
+            VariableDeclarationType,
         },
         evaluation::NodeResult,
     };

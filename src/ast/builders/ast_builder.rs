@@ -13,7 +13,7 @@ pub struct AstBuilder {
 }
 
 impl AstBuilder {
-    pub fn statement(mut self, statement_fn: impl Fn(StatementBuilder) -> Node) -> Self {
+    pub fn statement(mut self, statement_fn: impl FnOnce(StatementBuilder) -> Node) -> Self {
         self.nodes.push(statement_fn(StatementBuilder::default()));
         self
     }
