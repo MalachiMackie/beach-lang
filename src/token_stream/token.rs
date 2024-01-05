@@ -52,7 +52,7 @@ impl AstBuilder {
         let mut errors = Vec::new();
         let mut builder = AstBuilder::default();
         let mut tokens_iter = tokens.into_iter();
-        while let Some(next_token) = tokens_iter.next() {
+        while let Some(next_token) = dbg!(tokens_iter.next()) {
             match next_token {
                 Token::FunctionKeyword => todo!("function_declaration"),
                 Token::Identifier(_)
@@ -186,7 +186,7 @@ fn try_create_expression(
         Ok(value) => value,
     };
 
-    match next_token.or_else(|| tokens_iter.next()) {
+    match dbg!(next_token.or_else(|| tokens_iter.next())) {
         None => return Ok(expression),
         _ => todo!(),
     }
@@ -209,7 +209,8 @@ fn take_expression(
     ),
     Vec<TokenStreamError>,
 > {
-    let identifier = match tokens_iter.next() {
+    println!("here");
+    let identifier = match dbg!(tokens_iter.next()) {
         Some(Token::FalseKeyword) => {
             return Ok((
                 Box::new(|builder: ExpressionBuilder| builder.value_literal(false.into())),
@@ -241,12 +242,34 @@ fn take_expression(
         }
     };
 
-    match tokens_iter.next() {
+    match dbg!(tokens_iter.next()) {
         None => Ok((
             Box::new(move |builder: ExpressionBuilder| builder.variable(identifier.as_str())),
             None,
         )),
-        Some(Token::LeftParenthesis) => todo!("function call"),
+        Some(Token::LeftParenthesis) => match tokens_iter.next() {
+            Some(Token::RightParenthesis) => {
+                return Ok((
+                    Box::new(move |builder: ExpressionBuilder| {
+                        builder.function_call(|function_call| {
+                            function_call
+                                .function_id(&identifier)
+                                .no_parameters()
+                                .build()
+                        })
+                    }),
+                    None,
+                ));
+            }
+            Some(_next_token) => {
+                todo!("function call with parameters")
+            }
+            None => {
+                return Err(vec![TokenStreamError {
+                    message: "unexpected end of expression".to_owned(),
+                }])
+            }
+        },
         Some(token) => Ok((
             Box::new(move |builder: ExpressionBuilder| builder.variable(identifier.as_str())),
             Some(token),
@@ -309,5 +332,38 @@ mod tests {
         });
 
         assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
+    }
+
+    #[test]
+    fn infer_variable_declaration_assign_function_call() {
+        let tokens = vec![
+            Token::TypeKeyword(Type::Boolean),
+            Token::Identifier("my_var".to_owned()),
+            Token::AssignmentOperator,
+            Token::Identifier("my_function".to_owned()),
+            Token::LeftParenthesis,
+            Token::RightParenthesis,
+            Token::SemiColon,
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        let expected = AstBuilder::default().statement(|statement| {
+            statement.var_declaration(|var_decl| {
+                var_decl
+                    .name("my_var")
+                    .declare_type(Type::Boolean)
+                    .with_assignment(|value| {
+                        value.function_call(|function_call| {
+                            function_call
+                                .function_id("my_function")
+                                .no_parameters()
+                                .build()
+                        })
+                    })
+            })
+        });
+
+        assert!(matches!(dbg!(result), Ok(ast_builder) if ast_builder == expected));
     }
 }
