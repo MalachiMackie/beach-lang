@@ -49,7 +49,7 @@ impl IfStatementBuilder {
         self
     }
 
-    pub fn else_block(mut self, body_fn: impl Fn(AstBuilder) -> Ast) -> Self {
+    pub fn else_block(mut self, body_fn: impl FnOnce(AstBuilder) -> Ast) -> Self {
         let body = body_fn(AstBuilder::default());
 
         self.else_block = Some(body);
