@@ -41,6 +41,7 @@ fn fibonacci_tokens() -> Result<Ast, Vec<TokenStreamError>> {
     let limit_name = "limit".to_owned();
     let next_name = "next".to_owned();
     let tokens = vec![
+        // function fibonacci(uint lower, uint higher, uint limit) -> uint {
         Token::FunctionKeyword,
         Token::Identifier(fibonacci_name.clone()),
         Token::LeftParenthesis,
@@ -56,6 +57,7 @@ fn fibonacci_tokens() -> Result<Ast, Vec<TokenStreamError>> {
         Token::FunctionSignitureSplitter,
         Token::TypeKeyword(Type::UInt),
         Token::LeftCurleyBrace,
+        // infer next = lower + higher;
         Token::InferKeyword,
         Token::Identifier(next_name.clone()),
         Token::AssignmentOperator,
@@ -63,6 +65,7 @@ fn fibonacci_tokens() -> Result<Ast, Vec<TokenStreamError>> {
         Token::PlusOperator,
         Token::Identifier(higher_name.clone()),
         Token::SemiColon,
+        // if (next > limit) { return; }
         Token::IfKeyword,
         Token::LeftParenthesis,
         Token::Identifier(next_name.clone()),
@@ -73,11 +76,13 @@ fn fibonacci_tokens() -> Result<Ast, Vec<TokenStreamError>> {
         Token::ReturnKeyword,
         Token::SemiColon,
         Token::RightCurleyBrace,
+        // print(next);
         Token::Identifier("print".to_owned()),
         Token::LeftParenthesis,
         Token::Identifier(next_name.to_owned()),
         Token::RightParenthesis,
         Token::SemiColon,
+        // fibonacci(higher, next, limit);
         Token::Identifier(fibonacci_name.clone()),
         Token::LeftParenthesis,
         Token::Identifier(higher_name.clone()),
@@ -87,17 +92,21 @@ fn fibonacci_tokens() -> Result<Ast, Vec<TokenStreamError>> {
         Token::Identifier(limit_name.clone()),
         Token::RightParenthesis,
         Token::SemiColon,
+        // }
         Token::RightCurleyBrace,
+        // print(0);
         Token::Identifier("print".to_owned()),
         Token::LeftParenthesis,
         Token::UIntValue(0),
         Token::RightParenthesis,
         Token::SemiColon,
+        // print(1);
         Token::Identifier("print".to_owned()),
         Token::LeftParenthesis,
         Token::UIntValue(1),
         Token::RightParenthesis,
         Token::SemiColon,
+        // fibonacci(0, 1, 10000);
         Token::Identifier(fibonacci_name.clone()),
         Token::LeftParenthesis,
         Token::UIntValue(0),

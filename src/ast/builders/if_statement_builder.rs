@@ -21,7 +21,7 @@ impl IfStatementBuilder {
 
     pub fn check_expression(
         mut self,
-        expression_fn: impl Fn(ExpressionBuilder) -> Expression,
+        expression_fn: impl FnOnce(ExpressionBuilder) -> Expression,
     ) -> Self {
         let expression = expression_fn(ExpressionBuilder {});
         self.check_expression = Some(expression);
@@ -29,7 +29,7 @@ impl IfStatementBuilder {
         self
     }
 
-    pub fn body(mut self, body_fn: impl Fn(AstBuilder) -> Ast) -> Self {
+    pub fn body(mut self, body_fn: impl FnOnce(AstBuilder) -> Ast) -> Self {
         let body = body_fn(AstBuilder::default());
         self.body = Some(body);
 

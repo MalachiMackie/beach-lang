@@ -3,7 +3,7 @@ use std::{collections::VecDeque, fmt::Display};
 use crate::ast::{
     builders::{
         ast_builder::AstBuilder, expression_builder::ExpressionBuilder,
-        statement_builder::StatementBuilder,
+        if_statement_builder::IfStatementBuilder, statement_builder::StatementBuilder,
         variable_declaration_builder::VariableDeclarationBuilder,
     },
     node::{BinaryOperation, Expression, Node, Type, VariableDeclarationType},
@@ -51,35 +51,29 @@ impl AstBuilder {
         let mut builder = AstBuilder::default();
         let mut tokens: VecDeque<Token> = tokens.into();
         while let Some(next_token) = tokens.pop_front() {
-            let statement_type = match next_token {
+            match next_token {
                 Token::FunctionKeyword => todo!("function_declaration"),
-                Token::Identifier(identifier) => Some(StatementType::FunctionCall(identifier)),
-                Token::TypeKeyword(type_) => Some(StatementType::VariableDeclaration(
-                    VariableDeclarationType::Type(type_),
-                )),
-                Token::InferKeyword => Some(StatementType::VariableDeclaration(
-                    VariableDeclarationType::Infer,
-                )),
-                Token::IfKeyword => Some(StatementType::If),
-                Token::ReturnKeyword => Some(StatementType::Return),
                 _ => {
-                    errors.push(TokenStreamError {
-                        message: format!("{} is not a valid statement beginning", next_token),
-                    });
-                    None
+                    tokens.push_front(next_token);
+
+                    match try_create_statement(&mut tokens) {
+                        Err(statement_errors) => {
+                            errors.extend(statement_errors);
+                        }
+                        Ok(None) => {
+                            errors.push(TokenStreamError {
+                                message: format!(
+                                    "{} is not a valid statement beginning",
+                                    tokens.pop_front().unwrap()
+                                ),
+                            });
+                        }
+                        Ok(Some(statement_builder)) => {
+                            builder = builder.statement(statement_builder)
+                        }
+                    }
                 }
             };
-
-            if let Some(statement_type) = statement_type {
-                match try_start_statement(statement_type, &mut tokens) {
-                    Ok(statement_builder) => {
-                        builder = builder.statement(statement_builder);
-                    }
-                    Err(statement_errors) => {
-                        errors.extend(statement_errors);
-                    }
-                }
-            }
         }
 
         if errors.is_empty() {
@@ -90,6 +84,34 @@ impl AstBuilder {
     }
 }
 
+fn try_create_statement(
+    tokens: &mut VecDeque<Token>,
+) -> Result<Option<Box<dyn FnOnce(StatementBuilder) -> Node>>, Vec<TokenStreamError>> {
+    let token = tokens.pop_front();
+    let statement_type = match token {
+        None => {
+            return Err(vec![TokenStreamError {
+                message: "Unexpected end of tokens".to_owned(),
+            }]);
+        }
+        Some(Token::Identifier(identifier)) => StatementType::FunctionCall(identifier),
+        Some(Token::TypeKeyword(type_)) => {
+            StatementType::VariableDeclaration(VariableDeclarationType::Type(type_))
+        }
+        Some(Token::InferKeyword) => {
+            StatementType::VariableDeclaration(VariableDeclarationType::Infer)
+        }
+        Some(Token::IfKeyword) => StatementType::If,
+        Some(Token::ReturnKeyword) => StatementType::Return,
+        Some(token) => {
+            tokens.push_front(token);
+            return Ok(None);
+        }
+    };
+
+    try_start_statement(statement_type, tokens).map(|x| Some(x))
+}
+
 enum StatementType {
     FunctionCall(String),
     VariableDeclaration(VariableDeclarationType),
@@ -97,7 +119,7 @@ enum StatementType {
     Return,
 }
 
-fn take_while_from_front<T, TPredicate: FnMut(&T) -> bool>(
+fn take_from_front_while<T, TPredicate: FnMut(&T) -> bool>(
     items: &mut VecDeque<T>,
     mut predicate: TPredicate,
 ) -> Vec<T> {
@@ -106,6 +128,9 @@ fn take_while_from_front<T, TPredicate: FnMut(&T) -> bool>(
     while let Some(item) = items.pop_front() {
         if predicate(&item) {
             to_return.push(item);
+        }
+        else {
+            break;
         }
     }
 
@@ -117,15 +142,17 @@ fn take_while_from_front<T, TPredicate: FnMut(&T) -> bool>(
 fn try_start_statement(
     statement_type: StatementType,
     tokens: &mut VecDeque<Token>,
-) -> Result<impl FnOnce(StatementBuilder) -> Node, Vec<TokenStreamError>> {
+) -> Result<Box<dyn FnOnce(StatementBuilder) -> Node>, Vec<TokenStreamError>> {
     match statement_type {
         // variable declaration
         StatementType::VariableDeclaration(var_decl_type) => {
             // variable declaration should end with a semicolon, take all the tokens until the first semicolon
             let mut found_semicolon = false;
 
-            let tokens: VecDeque<_> = take_while_from_front(tokens, |token| {
-                found_semicolon = matches!(token, Token::SemiColon);
+            let tokens: VecDeque<_> = take_from_front_while(tokens, |token| {
+                if !found_semicolon {
+                    found_semicolon = matches!(token, Token::SemiColon);
+                }
                 !found_semicolon
             })
             .into();
@@ -138,15 +165,117 @@ fn try_start_statement(
             }
 
             match try_create_variable_declaration(var_decl_type, tokens) {
-                Ok(var_decl_builder) => Ok(|statement_builder: StatementBuilder| {
+                Ok(var_decl_builder) => Ok(Box::new(|statement_builder: StatementBuilder| {
                     statement_builder.var_declaration(var_decl_builder)
-                }),
+                })),
                 Err(errors) => Err(errors),
             }
         }
         StatementType::FunctionCall(_identifier) => todo!(),
-        StatementType::If => todo!(),
+        StatementType::If => match try_create_if_statement(tokens) {
+            Err(err) => Err(err),
+            Ok(if_statement_builder) => Ok(Box::new(|statement_builder: StatementBuilder| {
+                statement_builder.if_statement(if_statement_builder)
+            })),
+        },
         StatementType::Return => todo!(),
+    }
+}
+
+fn try_create_if_statement(
+    tokens: &mut VecDeque<Token>,
+) -> Result<impl FnOnce(IfStatementBuilder) -> Node, Vec<TokenStreamError>> {
+    match tokens.pop_front() {
+        None => {
+            return Err(vec![TokenStreamError {
+                message: "unexpected end of if statement".to_owned(),
+            }])
+        }
+        Some(Token::LeftParenthesis) => {}
+        Some(token) => {
+            return Err(vec![TokenStreamError {
+                message: format!("unexpected token {:?}", token),
+            }])
+        }
+    };
+
+    let expression = match take_expression(tokens) {
+        Err(errors) => return Err(errors),
+        Ok(expression) => expression,
+    };
+
+    match tokens.pop_front() {
+        None => {
+            return Err(vec![TokenStreamError {
+                message: "unexpected end of if statement".to_owned(),
+            }])
+        }
+        Some(Token::RightParenthesis) => {}
+        Some(token) => {
+            return Err(vec![TokenStreamError {
+                message: format!("unexpected token {:?}", token),
+            }])
+        }
+    }
+
+match tokens.pop_front() {
+        None => {
+            return Err(vec![TokenStreamError {
+                message: "unexpected end of if statement".to_owned(),
+            }])
+        }
+        Some(Token::LeftCurleyBrace) => {}
+        Some(token) => {
+            return Err(vec![TokenStreamError {
+                message: format!("unexpected token {:?}", token),
+            }])
+        }
+    }
+
+    let mut statements = Vec::new();
+    let mut require_end_curly_brace = false;
+
+    loop {
+        match tokens.pop_front() {
+            None => {
+                return Err(vec![TokenStreamError {
+                    message: "unexpected end of if statement".to_owned(),
+                }])
+            }
+            Some(Token::RightCurleyBrace) => {
+                return Ok(move |if_statement_builder: IfStatementBuilder| {
+                    if_statement_builder
+                        .check_expression(expression)
+                        .body(|mut body| {
+                            for statement in statements.into_iter() {
+                                body = body.statement(statement);
+                            }
+
+                            body.build()
+                        })
+                        .build()
+                });
+            }
+            Some(_) if require_end_curly_brace => {
+                return Err(vec![TokenStreamError {
+                    message: "Expected }".to_owned(),
+                }]);
+            }
+            Some(token) => {
+                tokens.push_front(token);
+
+                match try_create_statement(tokens) {
+                    Err(statement_errors) => return Err(statement_errors),
+                    Ok(None) => {
+                        // token is not a valid statement start, next token can only be an end curly brace
+                        require_end_curly_brace = true;
+                    }
+                    Ok(Some(statement_builder)) => {
+                        statements.push(statement_builder);
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -166,7 +295,7 @@ fn try_create_variable_declaration(
         }]);
     }
 
-    let expression_fn = match try_create_expression(&mut tokens) {
+    let expression_fn = match take_expression(&mut tokens) {
         Ok(expression_fn) => expression_fn,
         Err(errors) => return Err(errors),
     };
@@ -185,39 +314,24 @@ fn try_create_variable_declaration(
     })
 }
 
-fn try_create_expression(
-    tokens_iter: &mut VecDeque<Token>,
-) -> Result<Box<dyn FnOnce(ExpressionBuilder) -> Expression>, Vec<TokenStreamError>> {
-    let mut tokens_iter = Box::new(tokens_iter);
-    let expression = match take_expression(&mut tokens_iter) {
-        Err(errors) => return Err(errors),
-        Ok(value) => value,
-    };
-
-    match tokens_iter.pop_front() {
-        None => return Ok(expression),
-        _ => todo!(),
-    }
-}
-
 fn take_expression(
-    tokens_iter: &mut VecDeque<Token>,
+    tokens: &mut VecDeque<Token>,
 ) -> Result<Box<dyn FnOnce(ExpressionBuilder) -> Expression>, Vec<TokenStreamError>> {
-    match tokens_iter.pop_front() {
+    match tokens.pop_front() {
         Some(Token::FalseKeyword) => take_value_expression(
             Box::new(|builder: ExpressionBuilder| builder.value_literal(false.into())),
-            tokens_iter,
+            tokens,
         ),
         Some(Token::TrueKeyword) => take_value_expression(
             Box::new(|builder: ExpressionBuilder| builder.value_literal(true.into())),
-            tokens_iter,
+            tokens,
         ),
         Some(Token::UIntValue(value)) => take_value_expression(
             Box::new(move |builder: ExpressionBuilder| builder.value_literal(value.into())),
-            tokens_iter,
+            tokens,
         ),
-        Some(Token::Identifier(identifier)) => take_identifier_expression(identifier, tokens_iter),
-        Some(Token::NotOperator) => match take_expression(tokens_iter) {
+        Some(Token::Identifier(identifier)) => take_identifier_expression(identifier, tokens),
+        Some(Token::NotOperator) => match take_expression(tokens) {
             Err(errors) => Err(errors),
             Ok(value_expr) => Ok(Box::new(move |builder: ExpressionBuilder| {
                 builder.operation(|operation| operation.not(value_expr))
@@ -269,7 +383,7 @@ fn take_binary_operation_expression(
     }
 }
 
-/// take an expression from the `tokens_iter` that begins with an identifier. Either a `Token::Variable` or `Token::FunctionCall`
+/// take an expression from the `tokens` that begins with an identifier. Either a `Token::Variable` or `Token::FunctionCall`
 fn take_identifier_expression(
     identifier: String,
     tokens: &mut VecDeque<Token>,
@@ -802,15 +916,57 @@ mod tests {
                             operation.plus(
                                 |_| 10.into(),
                                 |right| {
-                                    right.operation(|operation| operation.plus(|_| 11.into(), |_| 12.into()))
+                                    right.operation(|operation| {
+                                        operation.plus(|_| 11.into(), |_| 12.into())
+                                    })
                                 },
-
                             )
                         })
                     })
             })
         });
 
-        assert!(matches!(dbg!(result), Ok(ast_builder) if ast_builder == expected));
+        assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
+    }
+
+    /// if (true) { infer a = false; }
+    #[test]
+    fn if_statement() {
+        let tokens = vec![
+            Token::IfKeyword,
+            Token::LeftParenthesis,
+            Token::TrueKeyword,
+            Token::RightParenthesis,
+            Token::LeftCurleyBrace,
+            Token::InferKeyword,
+            Token::Identifier("a".to_owned()),
+            Token::AssignmentOperator,
+            Token::FalseKeyword,
+            Token::SemiColon,
+            Token::RightCurleyBrace,
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        let expected = AstBuilder::default().statement(|statement| {
+            statement.if_statement(|if_statement| {
+                if_statement
+                    .check_expression(|_| true.into())
+                    .body(|body| {
+                        body.statement(|statement| {
+                            statement.var_declaration(|var_declaration| {
+                                var_declaration
+                                    .infer_type()
+                                    .name("a")
+                                    .with_assignment(|_| false.into())
+                            })
+                        })
+                        .build()
+                    })
+                    .build()
+            })
+        });
+
+        assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
     }
 }

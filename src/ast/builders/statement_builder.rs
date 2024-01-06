@@ -24,7 +24,7 @@ impl StatementBuilder {
         })
     }
 
-    pub fn if_statement(self, if_statement_fn: impl Fn(IfStatementBuilder) -> Node) -> Node {
+    pub fn if_statement(self, if_statement_fn: impl FnOnce(IfStatementBuilder) -> Node) -> Node {
         if_statement_fn(IfStatementBuilder::new())
     }
 
