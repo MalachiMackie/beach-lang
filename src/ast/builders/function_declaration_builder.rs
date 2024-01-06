@@ -4,7 +4,7 @@ use crate::ast::node::{
 
 use super::ast_builder::AstBuilder;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Default)]
 pub struct FunctionDeclarationBuilder {
     pub(super) id: Option<FunctionId>,
     pub(super) name: Option<String>,
@@ -15,16 +15,6 @@ pub struct FunctionDeclarationBuilder {
 }
 
 impl FunctionDeclarationBuilder {
-    pub fn new() -> Self {
-        Self {
-            id: None,
-            name: None,
-            parameters: None,
-            return_type: None,
-            body: None,
-        }
-    }
-
     pub fn name(mut self, name: &str) -> Self {
         self.id = Some(FunctionId(name.to_owned()));
         self.name = Some(name.to_owned());
@@ -33,11 +23,6 @@ impl FunctionDeclarationBuilder {
 
     pub fn parameters(mut self, parameters: Vec<FunctionParameter>) -> Self {
         self.parameters = Some(parameters);
-        self
-    }
-
-    pub fn no_parameters(mut self) -> Self {
-        self.parameters = Some(Vec::new());
         self
     }
 
@@ -73,7 +58,7 @@ mod tests {
 
     #[test]
     fn function_declaration_parameters() {
-        let result = FunctionDeclarationBuilder::new()
+        let result = FunctionDeclarationBuilder::default()
             .name("my_function")
             .parameters(vec![(Type::Boolean, "param1".to_owned()).into()])
             .return_type(Type::UInt)
@@ -112,9 +97,9 @@ mod tests {
 
     #[test]
     fn function_declaration_no_parameters() {
-        let actual = FunctionDeclarationBuilder::new()
+        let actual = FunctionDeclarationBuilder::default()
             .name("my_function")
-            .no_parameters()
+            .parameters(Vec::new())
             .return_type(Type::UInt)
             .body(|body| {
                 body.statement(|statement| {
@@ -138,9 +123,9 @@ mod tests {
 
     #[test]
     fn function_declaration_void() {
-        let actual = FunctionDeclarationBuilder::new()
+        let actual = FunctionDeclarationBuilder::default()
             .name("my_function")
-            .no_parameters()
+            .parameters(Vec::new())
             .void()
             .body(|body| body.statement(|statement| statement.return_void()).build());
 

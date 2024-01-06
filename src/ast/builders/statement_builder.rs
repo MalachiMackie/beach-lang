@@ -32,10 +32,7 @@ impl StatementBuilder {
         self,
         function_call_fn: impl FnOnce(FunctionCallBuilder) -> FunctionCall,
     ) -> Node {
-        Node::FunctionCall(function_call_fn(FunctionCallBuilder {
-            function_id: None,
-            parameters: None,
-        }))
+        Node::FunctionCall(function_call_fn(FunctionCallBuilder::default()))
     }
 
     pub fn return_value(self, expression: impl FnOnce(ExpressionBuilder) -> Expression) -> Node {

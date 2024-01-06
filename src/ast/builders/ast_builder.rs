@@ -22,13 +22,7 @@ impl AstBuilder {
         mut self,
         function_declaration_fn: impl FnOnce(FunctionDeclarationBuilder) -> FunctionDeclaration,
     ) -> AstBuilder {
-        let function_declaration = function_declaration_fn(FunctionDeclarationBuilder {
-            id: None,
-            body: None,
-            name: None,
-            parameters: None,
-            return_type: None,
-        });
+        let function_declaration = function_declaration_fn(FunctionDeclarationBuilder::default());
 
         self.functions.push(function_declaration);
 
@@ -89,7 +83,7 @@ mod tests {
             .function_declaration(|function_declaration| {
                 function_declaration
                     .name("my_function")
-                    .no_parameters()
+                    .parameters(Vec::new())
                     .void()
                     .body(|body| body.build())
             })

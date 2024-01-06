@@ -160,7 +160,7 @@ mod tests {
         let expected = AstBuilder::default().function_declaration(|function_declaration| {
             function_declaration
                 .name("my_function")
-                .no_parameters()
+                .parameters(Vec::new())
                 .void()
                 .body(|body| body.statement(|statement| statement.return_void()).build())
         });

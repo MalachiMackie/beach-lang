@@ -5,7 +5,7 @@ use crate::ast::{
     node::{BinaryOperation, Expression},
 };
 
-use super::{token::{Token, TokenStreamError, ensure_token}, function_call::take_function_call};
+use super::{token::{Token, TokenStreamError}, function_call::take_function_call};
 
 pub(super) fn take_expression(
     tokens: &mut VecDeque<Token>,

@@ -10,10 +10,7 @@ impl ExpressionBuilder {
         self,
         function_call_fn: impl FnOnce(FunctionCallBuilder) -> FunctionCall,
     ) -> Expression {
-        let function_call = function_call_fn(FunctionCallBuilder {
-            function_id: None,
-            parameters: None,
-        });
+        let function_call = function_call_fn(FunctionCallBuilder::default());
 
         Expression::FunctionCall(function_call)
     }

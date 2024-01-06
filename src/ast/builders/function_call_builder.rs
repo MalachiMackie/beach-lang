@@ -2,19 +2,13 @@ use crate::ast::node::{Expression, FunctionCall, FunctionId};
 
 use super::expression_builder::ExpressionBuilder;
 
+#[derive(Default)]
 pub struct FunctionCallBuilder {
     pub function_id: Option<FunctionId>,
     pub parameters: Option<Vec<Expression>>,
 }
 
 impl FunctionCallBuilder {
-    pub fn new() -> Self {
-        Self {
-            function_id: None,
-            parameters: None,
-        }
-    }
-
     pub fn function_id(mut self, function_id: &str) -> Self {
         self.function_id = Some(FunctionId(function_id.to_owned()));
         self
@@ -56,7 +50,7 @@ mod tests {
 
     #[test]
     fn function_call_no_parameters() {
-        let result = FunctionCallBuilder::new()
+        let result = FunctionCallBuilder::default()
             .function_id("my_function")
             .no_parameters()
             .build();
@@ -71,7 +65,7 @@ mod tests {
 
     #[test]
     fn function_call_parameter() {
-        let actual = FunctionCallBuilder::new()
+        let actual = FunctionCallBuilder::default()
             .function_id("my_function")
             .parameter(|param| param.value_literal(true.into()))
             .parameter(|param| param.value_literal(10.into()))
