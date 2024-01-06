@@ -1,7 +1,8 @@
 use std::collections::VecDeque;
 
 use crate::ast::{
-    builders::function_declaration_builder::FunctionDeclarationBuilder, node::FunctionDeclaration,
+    builders::function_declaration_builder::FunctionDeclarationBuilder,
+    node::{FunctionDeclaration, FunctionParameter},
 };
 
 use super::token::{ensure_token, get_block_statements, Token, TokenStreamError};
@@ -25,7 +26,57 @@ pub(super) fn build_function_declaration(
     };
 
     ensure_token(tokens, Token::LeftParenthesis)?;
-    ensure_token(tokens, Token::RightParenthesis)?;
+
+    let mut params = Vec::new();
+    let mut found_comma = false;
+
+    loop {
+        match tokens.pop_front() {
+            None => {
+                return Err(vec![TokenStreamError {
+                    message: "expected type or )".to_owned(),
+                }])
+            }
+            Some(Token::RightParenthesis) => {
+                break;
+            }
+            Some(Token::Comma) => {
+                found_comma = true;
+            }
+            Some(Token::TypeKeyword(_)) if !found_comma && params.len() > 0 => {
+                return Err(vec![TokenStreamError {
+                    message: "expected , or )".to_owned(),
+                }])
+            }
+            Some(Token::TypeKeyword(type_)) => {
+                match tokens.pop_front() {
+                    None => {
+                        return Err(vec![TokenStreamError {
+                            message: "expected type or )".to_owned(),
+                        }])
+                    }
+                    Some(Token::Identifier(identifier)) => {
+                        params.push(FunctionParameter::FunctionParameter {
+                            param_type: type_,
+                            param_name: identifier,
+                        });
+                    }
+                    Some(_) => {
+                        return Err(vec![TokenStreamError {
+                            message: "expected type or )".to_owned(),
+                        }]);
+                    }
+                }
+                found_comma = false;
+            }
+            Some(_) => {
+                return Err(vec![TokenStreamError {
+                    message: "expected type, ',', or )".to_owned(),
+                }])
+            }
+        }
+    }
+
     ensure_token(tokens, Token::LeftCurleyBrace)?;
 
     let statements = get_block_statements(tokens)?;
@@ -33,7 +84,7 @@ pub(super) fn build_function_declaration(
     Ok(Box::new(move |function_declaration_builder| {
         function_declaration_builder
             .name(&function_name)
-            .no_parameters()
+            .parameters(params)
             .void()
             .body(|mut body| {
                 for statement in statements {
@@ -47,7 +98,13 @@ pub(super) fn build_function_declaration(
 
 #[cfg(test)]
 mod tests {
-    use crate::{ast::builders::ast_builder::AstBuilder, token_stream::token::Token};
+    use crate::{
+        ast::{
+            builders::ast_builder::AstBuilder,
+            node::{FunctionParameter, Type},
+        },
+        token_stream::token::Token,
+    };
 
     #[test]
     fn function_declaration_no_parameters_no_return_value() {
@@ -73,5 +130,45 @@ mod tests {
         });
 
         assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
+    }
+
+    #[test]
+    fn function_declaration_parameters_no_return_value() {
+        let tokens = vec![
+            Token::FunctionKeyword,
+            Token::Identifier("my_function".to_owned()),
+            Token::LeftParenthesis,
+            Token::TypeKeyword(Type::UInt),
+            Token::Identifier("param_1".to_owned()),
+            Token::Comma,
+            Token::TypeKeyword(Type::Boolean),
+            Token::Identifier("param_2".to_owned()),
+            Token::RightParenthesis,
+            Token::LeftCurleyBrace,
+            Token::ReturnKeyword,
+            Token::SemiColon,
+            Token::RightCurleyBrace,
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        let expected = AstBuilder::default().function_declaration(|function_declaration| {
+            function_declaration
+                .name("my_function")
+                .parameters(vec![
+                    FunctionParameter::FunctionParameter {
+                        param_type: Type::UInt,
+                        param_name: "param_1".to_owned(),
+                    },
+                    FunctionParameter::FunctionParameter {
+                        param_type: Type::Boolean,
+                        param_name: "param_2".to_owned(),
+                    },
+                ])
+                .void()
+                .body(|body| body.statement(|statement| statement.return_void()).build())
+        });
+
+        assert!(matches!(dbg!(result), Ok(ast_builder) if ast_builder == expected));
     }
 }
