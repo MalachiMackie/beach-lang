@@ -7,11 +7,21 @@ use ast::{
     builders::ast_builder::AstBuilder,
     node::{Ast, FunctionParameter},
 };
+use token_stream::token::{Token, TokenStreamError};
 
 use crate::ast::node::Type;
 
 fn main() {
-    let ast = fibonacci(AstBuilder::default());
+    let ast = match fibonacci_tokens() {
+        Err(errors) => {
+            for error in errors {
+                println!("{}", error.message);
+            }
+
+            return;
+        },
+        Ok(ast) => ast
+    };
 
     if let Err(errors) = ast.type_check() {
         for error in errors {
@@ -22,6 +32,84 @@ fn main() {
     }
 
     ast.evaluate();
+}
+
+fn fibonacci_tokens() -> Result<Ast, Vec<TokenStreamError>> {
+    let fibonacci_name = "fibonacci".to_owned();
+    let lower_name = "lower".to_owned();
+    let higher_name = "higher".to_owned();
+    let limit_name = "limit".to_owned();
+    let next_name = "next".to_owned();
+    let tokens = vec![
+        Token::FunctionKeyword,
+        Token::Identifier(fibonacci_name.clone()),
+        Token::LeftParenthesis,
+        Token::TypeKeyword(Type::UInt),
+        Token::Identifier(lower_name.clone()),
+        Token::Comma,
+        Token::TypeKeyword(Type::UInt),
+        Token::Identifier(higher_name.clone()),
+        Token::Comma,
+        Token::TypeKeyword(Type::UInt),
+        Token::Identifier(limit_name.clone()),
+        Token::RightParenthesis,
+        Token::FunctionSignitureSplitter,
+        Token::TypeKeyword(Type::UInt),
+        Token::LeftCurleyBrace,
+        Token::InferKeyword,
+        Token::Identifier(next_name.clone()),
+        Token::AssignmentOperator,
+        Token::Identifier(lower_name.clone()),
+        Token::PlusOperator,
+        Token::Identifier(higher_name.clone()),
+        Token::SemiColon,
+        Token::IfKeyword,
+        Token::LeftParenthesis,
+        Token::Identifier(next_name.clone()),
+        Token::RightAngle,
+        Token::Identifier(limit_name.clone()),
+        Token::RightParenthesis,
+        Token::LeftCurleyBrace,
+        Token::ReturnKeyword,
+        Token::SemiColon,
+        Token::RightCurleyBrace,
+        Token::Identifier("print".to_owned()),
+        Token::LeftParenthesis,
+        Token::Identifier(next_name.to_owned()),
+        Token::RightParenthesis,
+        Token::SemiColon,
+        Token::Identifier(fibonacci_name.clone()),
+        Token::LeftParenthesis,
+        Token::Identifier(higher_name.clone()),
+        Token::Comma,
+        Token::Identifier(next_name.clone()),
+        Token::Comma,
+        Token::Identifier(limit_name.clone()),
+        Token::RightParenthesis,
+        Token::SemiColon,
+        Token::RightCurleyBrace,
+        Token::Identifier("print".to_owned()),
+        Token::LeftParenthesis,
+        Token::UIntValue(0),
+        Token::RightParenthesis,
+        Token::SemiColon,
+        Token::Identifier("print".to_owned()),
+        Token::LeftParenthesis,
+        Token::UIntValue(1),
+        Token::RightParenthesis,
+        Token::SemiColon,
+        Token::Identifier(fibonacci_name.clone()),
+        Token::LeftParenthesis,
+        Token::UIntValue(0),
+        Token::Comma,
+        Token::UIntValue(1),
+        Token::Comma,
+        Token::UIntValue(10000),
+        Token::RightParenthesis,
+        Token::SemiColon,
+    ];
+
+    AstBuilder::from_token_stream(tokens).map(|ast| ast.build())
 }
 
 /// function fibonnacci(uint lower, uint higher, uint limit) -> uint
@@ -40,7 +128,7 @@ fn main() {
 /// print(0);
 /// print(1);
 /// fibonnacci(0, 1, 10000);
-fn fibonacci(ast_builder: AstBuilder) -> Ast {
+fn fibonacci_ast_builder(ast_builder: AstBuilder) -> Ast {
     ast_builder
         .function_declaration(|function_declaration| {
             function_declaration

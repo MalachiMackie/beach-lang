@@ -3,10 +3,10 @@ use std::{collections::VecDeque, fmt::Display};
 use crate::ast::{
     builders::{
         ast_builder::AstBuilder, expression_builder::ExpressionBuilder,
-        function_call_builder::FunctionCallBuilder, statement_builder::StatementBuilder,
+        statement_builder::StatementBuilder,
         variable_declaration_builder::VariableDeclarationBuilder,
     },
-    node::{Expression, Node, Type, VariableDeclarationType, BinaryOperation, Operation},
+    node::{BinaryOperation, Expression, Node, Type, VariableDeclarationType},
 };
 
 #[derive(Clone, PartialEq, Debug)]
@@ -15,6 +15,7 @@ pub enum Token {
     Identifier(String),
     LeftParenthesis,
     RightParenthesis,
+    FunctionSignitureSplitter, // ->
     UIntValue(u32),
     TypeKeyword(Type),
     TrueKeyword,
@@ -41,7 +42,7 @@ impl Display for Token {
 
 #[derive(Debug)]
 pub struct TokenStreamError {
-    message: String,
+    pub message: String,
 }
 
 impl AstBuilder {
@@ -115,7 +116,7 @@ fn take_while_from_front<T, TPredicate: FnMut(&T) -> bool>(
 
 fn try_start_statement(
     statement_type: StatementType,
-    mut tokens: &mut VecDeque<Token>,
+    tokens: &mut VecDeque<Token>,
 ) -> Result<impl FnOnce(StatementBuilder) -> Node, Vec<TokenStreamError>> {
     match statement_type {
         // variable declaration
@@ -143,10 +144,9 @@ fn try_start_statement(
                 Err(errors) => Err(errors),
             }
         }
-        StatementType::FunctionCall(identifier) => todo!(),
+        StatementType::FunctionCall(_identifier) => todo!(),
         StatementType::If => todo!(),
         StatementType::Return => todo!(),
-        _ => unreachable!(),
     }
 }
 
@@ -185,16 +185,8 @@ fn try_create_variable_declaration(
     })
 }
 
-#[derive(PartialEq, Eq, Hash)]
-enum ExpressionType {
-    ValueLiteral,
-    FunctionCall,
-    Operation,
-    VariableAccess,
-}
-
 fn try_create_expression(
-    mut tokens_iter: &mut VecDeque<Token>,
+    tokens_iter: &mut VecDeque<Token>,
 ) -> Result<Box<dyn FnOnce(ExpressionBuilder) -> Expression>, Vec<TokenStreamError>> {
     let mut tokens_iter = Box::new(tokens_iter);
     let expression = match take_expression(&mut tokens_iter) {
@@ -209,7 +201,7 @@ fn try_create_expression(
 }
 
 fn take_expression(
-    mut tokens_iter: &mut VecDeque<Token>,
+    tokens_iter: &mut VecDeque<Token>,
 ) -> Result<Box<dyn FnOnce(ExpressionBuilder) -> Expression>, Vec<TokenStreamError>> {
     match tokens_iter.pop_front() {
         Some(Token::FalseKeyword) => take_value_expression(
@@ -246,8 +238,12 @@ fn take_value_expression(
 ) -> Result<Box<dyn FnOnce(ExpressionBuilder) -> Expression>, Vec<TokenStreamError>> {
     match tokens.pop_front() {
         None => Ok(value_expression),
-        Some(Token::PlusOperator) => take_binary_operation_expression(BinaryOperation::Plus, value_expression, tokens),
-        Some(Token::RightAngle) => take_binary_operation_expression(BinaryOperation::GreaterThan, value_expression, tokens),
+        Some(Token::PlusOperator) => {
+            take_binary_operation_expression(BinaryOperation::Plus, value_expression, tokens)
+        }
+        Some(Token::RightAngle) => {
+            take_binary_operation_expression(BinaryOperation::GreaterThan, value_expression, tokens)
+        }
         Some(token) => {
             tokens.push_front(token);
             Ok(value_expression)
@@ -258,21 +254,25 @@ fn take_value_expression(
 fn take_binary_operation_expression(
     operation: BinaryOperation,
     left_expression: Box<dyn FnOnce(ExpressionBuilder) -> Expression>,
-    tokens: &mut VecDeque<Token>
+    tokens: &mut VecDeque<Token>,
 ) -> Result<Box<dyn FnOnce(ExpressionBuilder) -> Expression>, Vec<TokenStreamError>> {
     match take_expression(tokens) {
         Err(errors) => Err(errors),
-        Ok(right_expression) => Ok(Box::new(move |expression_builder: ExpressionBuilder| expression_builder.operation(|operation_builder| match operation {
-            BinaryOperation::GreaterThan => operation_builder.greater_than(left_expression, right_expression),
-            BinaryOperation::Plus => operation_builder.plus(left_expression, right_expression),
-        })))
+        Ok(right_expression) => Ok(Box::new(move |expression_builder: ExpressionBuilder| {
+            expression_builder.operation(|operation_builder| match operation {
+                BinaryOperation::GreaterThan => {
+                    operation_builder.greater_than(left_expression, right_expression)
+                }
+                BinaryOperation::Plus => operation_builder.plus(left_expression, right_expression),
+            })
+        })),
     }
 }
 
 /// take an expression from the `tokens_iter` that begins with an identifier. Either a `Token::Variable` or `Token::FunctionCall`
 fn take_identifier_expression(
     identifier: String,
-    mut tokens: &mut VecDeque<Token>,
+    tokens: &mut VecDeque<Token>,
 ) -> Result<Box<dyn FnOnce(ExpressionBuilder) -> Expression>, Vec<TokenStreamError>> {
     match tokens.pop_front() {
         None => Ok(Box::new(move |builder: ExpressionBuilder| {
@@ -353,10 +353,7 @@ fn take_function_call(
 
 #[cfg(test)]
 mod tests {
-    use crate::ast::{
-        builders::ast_builder::AstBuilder,
-        node::{Function, Type},
-    };
+    use crate::ast::{builders::ast_builder::AstBuilder, node::Type};
 
     use super::Token;
 
