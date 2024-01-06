@@ -7,6 +7,7 @@ use crate::ast::{
 
 use super::{
     expression::take_expression,
+    function_call::take_function_call,
     if_statement::try_create_if_statement,
     token::{ensure_token, take_from_front_while, Token, TokenStreamError},
     variable_declaration::try_create_variable_declaration,
@@ -77,7 +78,9 @@ fn try_start_statement(
                 statement_builder.var_declaration(var_decl_builder)
             }))
         }
-        StatementType::FunctionCall(_identifier) => todo!(),
+        StatementType::FunctionCall(identifier) => {
+            Ok(Box::new(take_function_call_statement(identifier, tokens)?))
+        }
         StatementType::If => {
             let if_statement_builder = try_create_if_statement(tokens)?;
             Ok(Box::new(|statement_builder: StatementBuilder| {
@@ -86,6 +89,19 @@ fn try_start_statement(
         }
         StatementType::Return => Ok(Box::new(take_return_statement(tokens)?)),
     }
+}
+
+fn take_function_call_statement(
+    identifier: String,
+    tokens: &mut VecDeque<Token>,
+) -> Result<Box<dyn FnOnce(StatementBuilder) -> Node>, Vec<TokenStreamError>> {
+    let function_call = take_function_call(identifier, tokens)?;
+
+    ensure_token(tokens, Token::SemiColon)?;
+
+    Ok(Box::new(|statement_builder| {
+        statement_builder.function_call(function_call)
+    }))
 }
 
 fn take_return_statement(
@@ -147,6 +163,40 @@ mod tests {
         let expected = AstBuilder::default().statement(|statement| {
             statement.return_value(|value| {
                 value.operation(|operation| operation.plus(|_| 1.into(), |_| 2.into()))
+            })
+        });
+
+        assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
+    }
+
+    #[test]
+    fn function_call_statement() {
+        let tokens = vec![
+            Token::Identifier("print".to_owned()),
+            Token::LeftParenthesis,
+            Token::Identifier("my_function".to_owned()),
+            Token::LeftParenthesis,
+            Token::TrueKeyword,
+            Token::RightParenthesis,
+            Token::RightParenthesis,
+            Token::SemiColon,
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        let expected = AstBuilder::default().statement(|statement| {
+            statement.function_call(|function_call| {
+                function_call
+                    .function_id("print")
+                    .parameter(|param| {
+                        param.function_call(|function_call| {
+                            function_call
+                                .function_id("my_function")
+                                .parameter(|_| true.into())
+                                .build()
+                        })
+                    })
+                    .build()
             })
         });
 

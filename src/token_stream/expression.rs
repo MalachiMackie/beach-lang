@@ -5,7 +5,7 @@ use crate::ast::{
     node::{BinaryOperation, Expression},
 };
 
-use super::token::{Token, TokenStreamError};
+use super::{token::{Token, TokenStreamError, ensure_token}, function_call::take_function_call};
 
 pub(super) fn take_expression(
     tokens: &mut VecDeque<Token>,
@@ -84,7 +84,10 @@ fn take_identifier_expression(
         None => Ok(Box::new(move |builder: ExpressionBuilder| {
             builder.variable(identifier.as_str())
         })),
-        Some(Token::LeftParenthesis) => take_function_call_expression(tokens, identifier),
+        Some(Token::LeftParenthesis) => {
+            tokens.push_front(Token::LeftParenthesis);
+            take_function_call_expression(tokens, identifier)
+        },
         Some(token) => {
             tokens.push_front(token);
             return Ok(Box::new(move |builder: ExpressionBuilder| {
@@ -98,56 +101,10 @@ fn take_function_call_expression(
     tokens: &mut VecDeque<Token>,
     identifier: String,
 ) -> Result<Box<dyn FnOnce(ExpressionBuilder) -> Expression>, Vec<TokenStreamError>> {
-    let mut params = VecDeque::new();
+    let function_call = take_function_call(identifier, tokens)?;
 
-    let mut found_comma = false;
+    Ok(Box::new(|expression_builder: ExpressionBuilder| expression_builder.function_call(function_call)))
 
-    loop {
-        match tokens.pop_front() {
-            None => {
-                return Err(vec![TokenStreamError {
-                    message: "unexpected end of function call".to_owned(),
-                }])
-            }
-            Some(Token::RightParenthesis) => {
-                return Ok(Box::new(move |expression_builder| {
-                    expression_builder.function_call(|mut function_call| {
-                        function_call = function_call.function_id(&identifier);
-                        if params.is_empty() {
-                            function_call = function_call.no_parameters();
-                        } else {
-                            while let Some(param) = params.pop_front() {
-                                function_call = function_call.parameter(param);
-                            }
-                        }
-                        function_call.build()
-                    })
-                }))
-            }
-            Some(Token::Comma) => {
-                if params.is_empty() {
-                    return Err(vec![TokenStreamError {
-                        message: "unexpected ,".to_owned(),
-                    }]);
-                }
-                found_comma = true;
-            }
-            Some(token) => {
-                // not a comma, if we haven't seen a comma since the last parameter, then err
-                if params.len() > 0 && !found_comma {
-                    return Err(vec![TokenStreamError {
-                        message: "Require comma separating parameters".to_owned(),
-                    }]);
-                }
-
-                // reset found_comma
-                found_comma = false;
-
-                tokens.push_front(token);
-                params.push_back(take_expression(tokens)?);
-            }
-        };
-    }
 }
 
 #[cfg(test)]

@@ -30,7 +30,7 @@ impl StatementBuilder {
 
     pub fn function_call(
         self,
-        function_call_fn: impl Fn(FunctionCallBuilder) -> FunctionCall,
+        function_call_fn: impl FnOnce(FunctionCallBuilder) -> FunctionCall,
     ) -> Node {
         Node::FunctionCall(function_call_fn(FunctionCallBuilder {
             function_id: None,
