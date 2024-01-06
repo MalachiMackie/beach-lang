@@ -267,6 +267,8 @@ fn take_function_call(
 ) -> Result<Box<dyn FnOnce(ExpressionBuilder) -> Expression>, Vec<TokenStreamError>> {
     let mut params = VecDeque::new();
 
+    let mut found_comma = false;
+
     loop {
         match tokens.pop_front() {
             None => {
@@ -295,8 +297,19 @@ fn take_function_call(
                         message: "unexpected ,".to_owned(),
                     }]);
                 }
+                found_comma = true;
             }
             Some(token) => {
+                // not a comma, if we haven't seen a comma since the last parameter, then err
+                if params.len() > 0 && !found_comma {
+                    return Err(vec![TokenStreamError {
+                        message: "Require comma separating parameters".to_owned(),
+                    }]);
+                }
+
+                // reset found_comma
+                found_comma = false;
+
                 tokens.push_front(token);
                 match take_expression(tokens) {
                     Err(errors) => {
@@ -433,5 +446,177 @@ mod tests {
         });
 
         assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
+    }
+
+    #[test]
+    fn variable_declaration_assign_function_call_with_multiple_parameters_function_call_no_parameters(
+    ) {
+        let tokens = vec![
+            Token::TypeKeyword(Type::Boolean),
+            Token::Identifier("my_var".to_owned()),
+            Token::AssignmentOperator,
+            Token::Identifier("my_function".to_owned()),
+            Token::LeftParenthesis,
+            Token::TrueKeyword,
+            Token::Comma,
+            Token::Identifier("second_function".to_owned()),
+            Token::LeftParenthesis,
+            Token::RightParenthesis,
+            Token::RightParenthesis,
+            Token::SemiColon,
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        let expected = AstBuilder::default().statement(|statement| {
+            statement.var_declaration(|var_decl| {
+                var_decl
+                    .name("my_var")
+                    .declare_type(Type::Boolean)
+                    .with_assignment(|value| {
+                        value.function_call(|function_call| {
+                            function_call
+                                .function_id("my_function")
+                                .parameter(|value| value.value_literal(true.into()))
+                                .parameter(|param| {
+                                    param.function_call(|function_call| {
+                                        function_call
+                                            .function_id("second_function")
+                                            .no_parameters()
+                                            .build()
+                                    })
+                                })
+                                .build()
+                        })
+                    })
+            })
+        });
+
+        assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
+    }
+
+    #[test]
+    fn variable_declaration_assign_function_call_with_multiple_parameters_function_call_single_parameter(
+    ) {
+        let tokens = vec![
+            Token::TypeKeyword(Type::Boolean),
+            Token::Identifier("my_var".to_owned()),
+            Token::AssignmentOperator,
+            Token::Identifier("my_function".to_owned()),
+            Token::LeftParenthesis,
+            Token::TrueKeyword,
+            Token::Comma,
+            Token::Identifier("second_function".to_owned()),
+            Token::LeftParenthesis,
+            Token::TrueKeyword,
+            Token::RightParenthesis,
+            Token::RightParenthesis,
+            Token::SemiColon,
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        let expected = AstBuilder::default().statement(|statement| {
+            statement.var_declaration(|var_decl| {
+                var_decl
+                    .name("my_var")
+                    .declare_type(Type::Boolean)
+                    .with_assignment(|value| {
+                        value.function_call(|function_call| {
+                            function_call
+                                .function_id("my_function")
+                                .parameter(|value| value.value_literal(true.into()))
+                                .parameter(|param| {
+                                    param.function_call(|function_call| {
+                                        function_call
+                                            .function_id("second_function")
+                                            .parameter(|param| param.value_literal(true.into()))
+                                            .build()
+                                    })
+                                })
+                                .build()
+                        })
+                    })
+            })
+        });
+
+        assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
+    }
+
+    #[test]
+    fn variable_declaration_assign_function_call_with_three_parameters() {
+        let tokens = vec![
+            Token::TypeKeyword(Type::Boolean),
+            Token::Identifier("my_var".to_owned()),
+            Token::AssignmentOperator,
+            Token::Identifier("my_function".to_owned()),
+            Token::LeftParenthesis,
+            Token::TrueKeyword,
+            Token::Comma,
+            Token::FalseKeyword,
+            Token::Comma,
+            Token::TrueKeyword,
+            Token::RightParenthesis,
+            Token::SemiColon,
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        let expected = AstBuilder::default().statement(|statement| {
+            statement.var_declaration(|var_decl| {
+                var_decl
+                    .name("my_var")
+                    .declare_type(Type::Boolean)
+                    .with_assignment(|value| {
+                        value.function_call(|function_call| {
+                            function_call
+                                .function_id("my_function")
+                                .parameter(|value| value.value_literal(true.into()))
+                                .parameter(|value| value.value_literal(false.into()))
+                                .parameter(|value| value.value_literal(true.into()))
+                                .build()
+                        })
+                    })
+            })
+        });
+
+        assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
+    }
+
+    #[test]
+    fn function_call_requires_comma_between_params() {
+        let tokens = vec![
+            Token::TypeKeyword(Type::Boolean),
+            Token::Identifier("my_var".to_owned()),
+            Token::AssignmentOperator,
+            Token::Identifier("my_function".to_owned()),
+            Token::LeftParenthesis,
+            Token::TrueKeyword,
+            Token::FalseKeyword,
+            Token::TrueKeyword,
+            Token::RightParenthesis,
+            Token::SemiColon,
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        assert!(matches!(result, Err(_)));
+    }
+
+    #[test]
+    fn function_call_fails_when_no_expression() {
+        let tokens = vec![
+            Token::InferKeyword,
+            Token::Identifier("my_var".to_owned()),
+            Token::AssignmentOperator,
+            Token::Identifier("my_function".to_owned()),
+            Token::LeftParenthesis,
+            Token::Comma,
+            Token::RightParenthesis
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        assert!(matches!(result, Err(_)));
     }
 }
