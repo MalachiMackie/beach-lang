@@ -38,8 +38,8 @@ impl IfStatementBuilder {
 
     pub fn else_if(
         mut self,
-        check_fn: impl Fn(ExpressionBuilder) -> Expression,
-        body_fn: impl Fn(AstBuilder) -> Ast,
+        check_fn: impl FnOnce(ExpressionBuilder) -> Expression,
+        body_fn: impl FnOnce(AstBuilder) -> Ast,
     ) -> Self {
         let check = check_fn(ExpressionBuilder {});
         let body = body_fn(AstBuilder::default());

@@ -164,19 +164,17 @@ fn try_start_statement(
                 }]);
             }
 
-            match try_create_variable_declaration(var_decl_type, tokens) {
-                Ok(var_decl_builder) => Ok(Box::new(|statement_builder: StatementBuilder| {
-                    statement_builder.var_declaration(var_decl_builder)
-                })),
-                Err(errors) => Err(errors),
-            }
+            let var_decl_builder = try_create_variable_declaration(var_decl_type, tokens)?;
+            Ok(Box::new(|statement_builder: StatementBuilder| {
+                statement_builder.var_declaration(var_decl_builder)
+            }))
         }
         StatementType::FunctionCall(_identifier) => todo!(),
-        StatementType::If => match try_create_if_statement(tokens) {
-            Err(err) => Err(err),
-            Ok(if_statement_builder) => Ok(Box::new(|statement_builder: StatementBuilder| {
+        StatementType::If => {
+            let if_statement_builder = try_create_if_statement(tokens)?;
+            Ok(Box::new(|statement_builder: StatementBuilder| {
                 statement_builder.if_statement(if_statement_builder)
-            })),
+            }))
         },
         StatementType::Return => todo!(),
     }
@@ -187,40 +185,58 @@ fn try_create_if_statement(
 ) -> Result<impl FnOnce(IfStatementBuilder) -> Node, Vec<TokenStreamError>> {
     ensure_token(tokens, Token::LeftParenthesis)?;
 
-    let check_expression = match take_expression(tokens) {
-        Err(errors) => return Err(errors),
-        Ok(expression) => expression,
-    };
+    let check_expression = take_expression(tokens)?;
 
     ensure_token(tokens, Token::RightParenthesis)?;
     ensure_token(tokens, Token::LeftCurleyBrace)?;
 
     let statements = get_block_statements(tokens)?;
     let mut else_statements = None;
+    let mut else_if_blocks = Vec::new();
 
-    match tokens.pop_front() {
-        None => {
-            return Ok(build_if_statement(
-                check_expression,
-                statements,
-                else_statements,
-            ));
-        }
-        Some(Token::ElseKeyword) => {} // continue to make an if else statement
-        Some(token) => {
-            tokens.push_front(token);
-        }
-    };
+    let mut found_else = false;
+    loop {
+        match tokens.pop_front() {
+            None if found_else => {
+                return Err(vec![TokenStreamError{message: format!("Expected {} or {}", Token::IfKeyword, Token::LeftCurleyBrace)}])
+            }
+            None => {
+                return Ok(build_if_statement(
+                    check_expression,
+                    statements,
+                    else_statements,
+                    else_if_blocks
+                ));
+            }
+            Some(Token::ElseKeyword) if found_else => {
+                return Err(vec![TokenStreamError{message: format!("Expected {} or {}", Token::IfKeyword, Token::LeftCurleyBrace)}])
+            }
+            Some(Token::ElseKeyword) => {
+                found_else = true;
+            },
+            Some(Token::LeftCurleyBrace) if found_else => {
+                else_statements = Some(get_block_statements(tokens)?);
+                return Ok(build_if_statement(check_expression, statements, else_statements, else_if_blocks));
+            }
+            Some(Token::IfKeyword) if found_else => {
+                ensure_token(tokens, Token::LeftParenthesis)?;
+                let check_expression = take_expression(tokens)?;
+                ensure_token(tokens, Token::RightParenthesis)?;
+                ensure_token(tokens, Token::LeftCurleyBrace)?;
+                let statements = get_block_statements(tokens)?;
 
-    ensure_token(tokens, Token::LeftCurleyBrace)?;
-
-    else_statements = Some(get_block_statements(tokens)?);
-
-    Ok(build_if_statement(
-        check_expression,
-        statements,
-        else_statements,
-    ))
+                else_if_blocks.push((check_expression, statements));
+                found_else = false;
+            },
+            Some(_) if found_else => {
+                return Err(vec![TokenStreamError{message: format!("Expected {} or {}", Token::IfKeyword, Token::LeftCurleyBrace)}])
+            }
+            Some(token) => {
+                tokens.push_front(token);
+                return Ok(build_if_statement(check_expression, statements, else_statements, else_if_blocks));
+            }
+        };
+    }
 }
 
 fn ensure_token(tokens: &mut VecDeque<Token>, expected: Token) -> Result<(), Vec<TokenStreamError>> {
@@ -235,6 +251,7 @@ fn build_if_statement(
     check_expression: Box<dyn FnOnce(ExpressionBuilder) -> Expression>,
     statements: Vec<Box<dyn FnOnce(StatementBuilder) -> Node>>,
     else_statements: Option<Vec<Box<dyn FnOnce(StatementBuilder) -> Node>>>,
+    else_if_blocks: Vec<(Box<dyn FnOnce(ExpressionBuilder) -> Expression>, Vec<Box<dyn FnOnce(StatementBuilder) -> Node>>)>
 ) -> Box<dyn FnOnce(IfStatementBuilder) -> Node> {
     Box::new(|mut if_statement_builder: IfStatementBuilder| {
         if_statement_builder = if_statement_builder
@@ -246,6 +263,16 @@ fn build_if_statement(
 
                 body.build()
             });
+
+        for (else_if_check, else_if_statements) in else_if_blocks {
+            if_statement_builder = if_statement_builder.else_if(else_if_check, move|mut body| {
+                for statement in else_if_statements {
+                    body = body.statement(statement);
+                }
+
+                body.build()
+            })
+        }
 
         if let Some(else_statements) = else_statements {
             if_statement_builder = if_statement_builder.else_block(move |mut body| {
@@ -284,13 +311,12 @@ fn get_block_statements(
             Some(token) => {
                 tokens.push_front(token);
 
-                match try_create_statement(tokens) {
-                    Err(statement_errors) => return Err(statement_errors),
-                    Ok(None) => {
+                match try_create_statement(tokens)? {
+                    None => {
                         // token is not a valid statement start, next token can only be an end curly brace
                         require_end_curly_brace = true;
                     }
-                    Ok(Some(statement_builder)) => {
+                    Some(statement_builder) => {
                         statements.push(statement_builder);
                     }
                 }
@@ -317,10 +343,7 @@ fn try_create_variable_declaration(
         }]);
     }
 
-    let expression_fn = match take_expression(&mut tokens) {
-        Ok(expression_fn) => expression_fn,
-        Err(errors) => return Err(errors),
-    };
+    let expression_fn = take_expression(&mut tokens)?;
 
     Ok(move |mut var_decl_builder: VariableDeclarationBuilder| {
         match var_decl_type {
@@ -353,11 +376,11 @@ fn take_expression(
             tokens,
         ),
         Some(Token::Identifier(identifier)) => take_identifier_expression(identifier, tokens),
-        Some(Token::NotOperator) => match take_expression(tokens) {
-            Err(errors) => Err(errors),
-            Ok(value_expr) => Ok(Box::new(move |builder: ExpressionBuilder| {
+        Some(Token::NotOperator) => {
+            let value_expr = take_expression(tokens)?;
+            Ok(Box::new(move |builder: ExpressionBuilder| {
                 builder.operation(|operation| operation.not(value_expr))
-            })),
+            }))
         },
         Some(token) => Err(vec![TokenStreamError {
             message: format!("unexpected token {:?}", token),
@@ -392,17 +415,16 @@ fn take_binary_operation_expression(
     left_expression: Box<dyn FnOnce(ExpressionBuilder) -> Expression>,
     tokens: &mut VecDeque<Token>,
 ) -> Result<Box<dyn FnOnce(ExpressionBuilder) -> Expression>, Vec<TokenStreamError>> {
-    match take_expression(tokens) {
-        Err(errors) => Err(errors),
-        Ok(right_expression) => Ok(Box::new(move |expression_builder: ExpressionBuilder| {
-            expression_builder.operation(|operation_builder| match operation {
-                BinaryOperation::GreaterThan => {
-                    operation_builder.greater_than(left_expression, right_expression)
-                }
-                BinaryOperation::Plus => operation_builder.plus(left_expression, right_expression),
-            })
-        })),
-    }
+    let right_expression = take_expression(tokens)?;
+    
+    Ok(Box::new(move |expression_builder: ExpressionBuilder| {
+        expression_builder.operation(|operation_builder| match operation {
+            BinaryOperation::GreaterThan => {
+                operation_builder.greater_than(left_expression, right_expression)
+            }
+            BinaryOperation::Plus => operation_builder.plus(left_expression, right_expression),
+        })
+    }))
 }
 
 /// take an expression from the `tokens` that begins with an identifier. Either a `Token::Variable` or `Token::FunctionCall`
@@ -474,14 +496,7 @@ fn take_function_call(
                 found_comma = false;
 
                 tokens.push_front(token);
-                match take_expression(tokens) {
-                    Err(errors) => {
-                        return Err(errors);
-                    }
-                    Ok(param) => {
-                        params.push_back(param);
-                    }
-                }
+                params.push_back(take_expression(tokens)?);
             }
         };
     }
@@ -1049,6 +1064,123 @@ mod tests {
             })
         });
 
-        assert!(matches!(dbg!(result), Ok(ast_builder) if ast_builder == expected));
+        assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
+    }
+
+    /// if (true)
+    /// {
+    ///     infer a = false;
+    /// }
+    /// else if (true)
+    /// {
+    ///     infer b = true;
+    /// }
+    /// else if (true)
+    /// {
+    ///     infer c = true;
+    /// }
+    /// else
+    /// {
+    ///     infer d = true;
+    /// }
+    #[test]
+    fn if_else_if_statement() {
+        let tokens = vec![
+            Token::IfKeyword,
+            Token::LeftParenthesis,
+            Token::TrueKeyword,
+            Token::RightParenthesis,
+            Token::LeftCurleyBrace,
+            Token::InferKeyword,
+            Token::Identifier("a".to_owned()),
+            Token::AssignmentOperator,
+            Token::FalseKeyword,
+            Token::SemiColon,
+            Token::RightCurleyBrace,
+            Token::ElseKeyword,
+            Token::IfKeyword,
+            Token::LeftParenthesis,
+            Token::TrueKeyword,
+            Token::RightParenthesis,
+            Token::LeftCurleyBrace,
+            Token::InferKeyword,
+            Token::Identifier("b".to_owned()),
+            Token::AssignmentOperator,
+            Token::TrueKeyword,
+            Token::SemiColon,
+            Token::RightCurleyBrace,
+            Token::ElseKeyword,
+            Token::IfKeyword,
+            Token::LeftParenthesis,
+            Token::TrueKeyword,
+            Token::RightParenthesis,
+            Token::LeftCurleyBrace,
+            Token::InferKeyword,
+            Token::Identifier("c".to_owned()),
+            Token::AssignmentOperator,
+            Token::TrueKeyword,
+            Token::SemiColon,
+            Token::RightCurleyBrace,
+            Token::ElseKeyword,
+            Token::LeftCurleyBrace,
+            Token::InferKeyword,
+            Token::Identifier("d".to_owned()),
+            Token::AssignmentOperator,
+            Token::TrueKeyword,
+            Token::SemiColon,
+            Token::RightCurleyBrace
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        let expected = AstBuilder::default().statement(|statement| {
+            statement.if_statement(|if_statement| {
+                if_statement
+                    .check_expression(|_| true.into())
+                    .body(|body| {
+                        body.statement(|statement| {
+                            statement.var_declaration(|var_declaration| {
+                                var_declaration
+                                    .infer_type()
+                                    .name("a")
+                                    .with_assignment(|_| false.into())
+                            })
+                        })
+                        .build()
+                    })
+                    .else_if(|_| true.into(), |body| body.statement(|statement| {
+                            statement.var_declaration(|var_declaration| {
+                                var_declaration
+                                    .infer_type()
+                                    .name("b")
+                                    .with_assignment(|_| true.into())
+                            })
+                        })
+                        .build())
+                    .else_if(|_| true.into(), |body| body.statement(|statement| {
+                            statement.var_declaration(|var_declaration| {
+                                var_declaration
+                                    .infer_type()
+                                    .name("c")
+                                    .with_assignment(|_| true.into())
+                            })
+                        })
+                        .build())
+                    .else_block(|body| {
+                        body.statement(|statement| {
+                            statement.var_declaration(|var_declaration| {
+                                var_declaration
+                                    .infer_type()
+                                    .name("d")
+                                    .with_assignment(|_| true.into())
+                            })
+                        })
+                        .build()
+                    })
+                    .build()
+            })
+        });
+
+        assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
     }
 }
