@@ -38,7 +38,7 @@ impl StatementBuilder {
         }))
     }
 
-    pub fn return_value(self, expression: impl Fn(ExpressionBuilder) -> Expression) -> Node {
+    pub fn return_value(self, expression: impl FnOnce(ExpressionBuilder) -> Expression) -> Node {
         Node::FunctionReturn {
             return_value: Some(expression(ExpressionBuilder {})),
         }

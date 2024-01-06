@@ -7,9 +7,7 @@ use crate::ast::{
     node::{Node, Type},
 };
 
-use super::{
-    statement::try_create_statement,
-};
+use super::statement::try_create_statement;
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Token {

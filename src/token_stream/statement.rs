@@ -1,13 +1,14 @@
 use std::collections::VecDeque;
 
 use crate::ast::{
-    builders::statement_builder::StatementBuilder,
-    node::{Node, VariableDeclarationType},
+    builders::{expression_builder::ExpressionBuilder, statement_builder::StatementBuilder},
+    node::{Expression, Node, VariableDeclarationType},
 };
 
 use super::{
+    expression::take_expression,
     if_statement::try_create_if_statement,
-    token::{take_from_front_while, Token, TokenStreamError},
+    token::{ensure_token, take_from_front_while, Token, TokenStreamError},
     variable_declaration::try_create_variable_declaration,
 };
 
@@ -83,6 +84,72 @@ fn try_start_statement(
                 statement_builder.if_statement(if_statement_builder)
             }))
         }
-        StatementType::Return => todo!(),
+        StatementType::Return => Ok(Box::new(take_return_statement(tokens)?)),
+    }
+}
+
+fn take_return_statement(
+    tokens: &mut VecDeque<Token>,
+) -> Result<Box<dyn FnOnce(StatementBuilder) -> Node>, Vec<TokenStreamError>> {
+    match tokens.pop_front() {
+        None => Err(vec![TokenStreamError {
+            message: "Expected ; or expression".to_owned(),
+        }]),
+        Some(Token::SemiColon) => Ok(build_return_statement(None)),
+        Some(token) => {
+            tokens.push_front(token);
+            let expression = take_expression(tokens)?;
+
+            ensure_token(tokens, Token::SemiColon)?;
+
+            Ok(build_return_statement(Some(expression)))
+        }
+    }
+}
+
+fn build_return_statement(
+    expression: Option<Box<dyn FnOnce(ExpressionBuilder) -> Expression>>,
+) -> Box<dyn FnOnce(StatementBuilder) -> Node> {
+    if let Some(expression) = expression {
+        Box::new(|statement_builder: StatementBuilder| statement_builder.return_value(expression))
+    } else {
+        Box::new(|statement_builder: StatementBuilder| statement_builder.return_void())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{ast::builders::ast_builder::AstBuilder, token_stream::token::Token};
+
+    #[test]
+    fn return_statement() {
+        let tokens = vec![Token::ReturnKeyword, Token::SemiColon];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        let expected = AstBuilder::default().statement(|statement| statement.return_void());
+
+        assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
+    }
+
+    #[test]
+    fn return_statement_value() {
+        let tokens = vec![
+            Token::ReturnKeyword,
+            Token::UIntValue(1),
+            Token::PlusOperator,
+            Token::UIntValue(2),
+            Token::SemiColon,
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        let expected = AstBuilder::default().statement(|statement| {
+            statement.return_value(|value| {
+                value.operation(|operation| operation.plus(|_| 1.into(), |_| 2.into()))
+            })
+        });
+
+        assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
     }
 }
