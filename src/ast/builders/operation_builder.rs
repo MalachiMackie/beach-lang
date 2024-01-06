@@ -18,8 +18,8 @@ impl OperationBuilder {
 
     pub fn greater_than(
         self,
-        left_fn: impl Fn(ExpressionBuilder) -> Expression,
-        right_fn: impl Fn(ExpressionBuilder) -> Expression,
+        left_fn: impl FnOnce(ExpressionBuilder) -> Expression,
+        right_fn: impl FnOnce(ExpressionBuilder) -> Expression,
     ) -> Operation {
         Operation::Binary {
             operation: BinaryOperation::GreaterThan,
