@@ -8,7 +8,10 @@ use crate::ast::{
     node::{Expression, Node},
 };
 
-use super::{token::{ensure_token, get_block_statements, Token, TokenStreamError}, expression::take_expression};
+use super::{
+    expression::take_expression,
+    token::{ensure_token, get_block_statements, Token, TokenStreamError},
+};
 
 pub(super) fn try_create_if_statement(
     tokens: &mut VecDeque<Token>,
@@ -143,7 +146,10 @@ fn build_if_statement(
 
 #[cfg(test)]
 mod tests {
-    use crate::{token_stream::token::Token, ast::builders::ast_builder::AstBuilder};
+    use crate::{
+        ast::builders::{ast_builder::AstBuilder, function_call_builder::FunctionCallBuilder},
+        token_stream::token::Token,
+    };
 
     /// if (true) { infer a = false; }
     #[test]
@@ -364,6 +370,82 @@ mod tests {
                                     .with_assignment(|_| true.into())
                             })
                         })
+                        .build()
+                    })
+                    .build()
+            })
+        });
+
+        assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
+    }
+
+    /// if (true)
+    /// {
+    ///     my_function();
+    ///     if (true)
+    ///     {
+    ///         my_function();
+    ///     }
+    ///     my_function();
+    /// }
+    #[test]
+    fn nested_if_statement() {
+        let tokens = vec![
+            Token::IfKeyword,
+            Token::LeftParenthesis,
+            Token::TrueKeyword,
+            Token::RightParenthesis,
+            Token::LeftCurleyBrace,
+            Token::Identifier("my_function".to_owned()),
+            Token::LeftParenthesis,
+            Token::RightParenthesis,
+            Token::SemiColon,
+            Token::IfKeyword,
+            Token::LeftParenthesis,
+            Token::TrueKeyword,
+            Token::RightParenthesis,
+            Token::LeftCurleyBrace,
+            Token::Identifier("my_function".to_owned()),
+            Token::LeftParenthesis,
+            Token::RightParenthesis,
+            Token::SemiColon,
+            Token::RightCurleyBrace,
+            Token::Identifier("my_function".to_owned()),
+            Token::LeftParenthesis,
+            Token::RightParenthesis,
+            Token::SemiColon,
+            Token::RightCurleyBrace,
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        let function_call_builder = |function_call: FunctionCallBuilder| {
+            function_call
+                .function_id("my_function")
+                .no_parameters()
+                .build()
+        };
+        let expected = AstBuilder::default().statement(|statement| {
+            statement.if_statement(|if_statement| {
+                if_statement
+                    .check_expression(|_| true.into())
+                    .body(|body| {
+                        body.statement(|statement| {
+                            statement.function_call(function_call_builder.clone())
+                        })
+                        .statement(|statement| {
+                            statement.if_statement(|if_statement| {
+                                if_statement
+                                    .check_expression(|_| true.into())
+                                    .body(|body| {
+                                        body.statement(|statement| {
+                                            statement.function_call(function_call_builder.clone())
+                                        }).build()
+                                    })
+                                    .build()
+                            })
+                        })
+                        .statement(|statement| statement.function_call(function_call_builder.clone()))
                         .build()
                     })
                     .build()
