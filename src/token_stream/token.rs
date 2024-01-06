@@ -1,8 +1,4 @@
-use std::{
-    collections::{hash_map::RandomState, HashSet},
-    fmt::Display,
-    hash,
-};
+use std::{collections::VecDeque, fmt::Display};
 
 use crate::ast::{
     builders::{
@@ -10,7 +6,7 @@ use crate::ast::{
         statement_builder::StatementBuilder,
         variable_declaration_builder::VariableDeclarationBuilder,
     },
-    node::{Expression, Node, Type, Value, VariableDeclarationType},
+    node::{Expression, Node, Type, VariableDeclarationType},
 };
 
 #[derive(Clone, PartialEq, Debug)]
@@ -51,29 +47,35 @@ impl AstBuilder {
     pub fn from_token_stream(tokens: Vec<Token>) -> Result<Self, Vec<TokenStreamError>> {
         let mut errors = Vec::new();
         let mut builder = AstBuilder::default();
-        let mut tokens_iter = tokens.into_iter();
-        while let Some(next_token) = dbg!(tokens_iter.next()) {
-            match next_token {
+        let mut tokens: VecDeque<Token> = tokens.into();
+        while let Some(next_token) = tokens.pop_front() {
+            let statement_type = match next_token {
                 Token::FunctionKeyword => todo!("function_declaration"),
-                Token::Identifier(_)
-                | Token::UIntValue(_)
-                | Token::TypeKeyword(_)
-                | Token::TrueKeyword
-                | Token::FalseKeyword
-                | Token::InferKeyword
-                | Token::IfKeyword
-                | Token::ReturnKeyword => match try_start_statement(next_token, &mut tokens_iter) {
+                Token::Identifier(identifier) => Some(StatementType::FunctionCall(identifier)),
+                Token::TypeKeyword(type_) => Some(StatementType::VariableDeclaration(
+                    VariableDeclarationType::Type(type_),
+                )),
+                Token::InferKeyword => Some(StatementType::VariableDeclaration(
+                    VariableDeclarationType::Infer,
+                )),
+                Token::IfKeyword => Some(StatementType::If),
+                Token::ReturnKeyword => Some(StatementType::Return),
+                _ => {
+                    errors.push(TokenStreamError {
+                        message: format!("{} is not a valid statement beginning", next_token),
+                    });
+                    None
+                }
+            };
+
+            if let Some(statement_type) = statement_type {
+                match try_start_statement(statement_type, &mut tokens) {
                     Ok(statement_builder) => {
                         builder = builder.statement(statement_builder);
                     }
                     Err(statement_errors) => {
                         errors.extend(statement_errors);
                     }
-                },
-                _ => {
-                    errors.push(TokenStreamError {
-                        message: format!("{} is not a valid statement beginning", next_token),
-                    });
                 }
             }
         }
@@ -86,22 +88,45 @@ impl AstBuilder {
     }
 }
 
+enum StatementType {
+    FunctionCall(String),
+    VariableDeclaration(VariableDeclarationType),
+    If,
+    Return,
+}
+
+fn take_while_from_front<T, TPredicate: FnMut(&T) -> bool>(
+    items: &mut VecDeque<T>,
+    mut predicate: TPredicate,
+) -> Vec<T> {
+    let mut to_return = Vec::with_capacity(items.len());
+
+    while let Some(item) = items.pop_front() {
+        if predicate(&item) {
+            to_return.push(item);
+        }
+    }
+
+    to_return.shrink_to_fit();
+
+    to_return
+}
+
 fn try_start_statement(
-    first_token: Token,
-    mut tokens_iter: &mut impl Iterator<Item = Token>,
+    statement_type: StatementType,
+    mut tokens: &mut VecDeque<Token>,
 ) -> Result<impl FnOnce(StatementBuilder) -> Node, Vec<TokenStreamError>> {
-    match first_token {
+    match statement_type {
         // variable declaration
-        Token::TypeKeyword(_) | Token::InferKeyword => {
+        StatementType::VariableDeclaration(var_decl_type) => {
             // variable declaration should end with a semicolon, take all the tokens until the first semicolon
             let mut found_semicolon = false;
-            let tokens: Vec<_> = tokens_iter
-                .by_ref()
-                .take_while(|token| {
-                    found_semicolon = matches!(token, Token::SemiColon);
-                    !found_semicolon
-                })
-                .collect();
+
+            let tokens: VecDeque<_> = take_while_from_front(tokens, |token| {
+                found_semicolon = matches!(token, Token::SemiColon);
+                !found_semicolon
+            })
+            .into();
 
             // we got to the end of the tokens without a semicolon
             if !found_semicolon {
@@ -110,48 +135,37 @@ fn try_start_statement(
                 }]);
             }
 
-            match try_create_variable_declaration(first_token, tokens) {
+            match try_create_variable_declaration(var_decl_type, tokens) {
                 Ok(var_decl_builder) => Ok(|statement_builder: StatementBuilder| {
                     statement_builder.var_declaration(var_decl_builder)
                 }),
                 Err(errors) => Err(errors),
             }
         }
-        // perform operation on a value
-        Token::UIntValue(_) | Token::TrueKeyword | Token::FalseKeyword | Token::Identifier(_) => {
-            todo!()
-        }
-        Token::IfKeyword => todo!(),
-        Token::ReturnKeyword => todo!(),
+        StatementType::FunctionCall(identifier) => todo!(),
+        StatementType::If => todo!(),
+        StatementType::Return => todo!(),
         _ => unreachable!(),
     }
 }
 
 fn try_create_variable_declaration(
-    keyword: Token,
-    tokens: Vec<Token>,
+    var_decl_type: VariableDeclarationType,
+    mut tokens: VecDeque<Token>,
 ) -> Result<impl FnOnce(VariableDeclarationBuilder) -> Node, Vec<TokenStreamError>> {
-    let var_decl_type = match keyword {
-        Token::InferKeyword => VariableDeclarationType::Infer,
-        Token::TypeKeyword(found_type) => VariableDeclarationType::Type(found_type),
-        _ => unreachable!(),
-    };
-
-    let mut tokens_iter = tokens.into_iter();
-
-    let Some(Token::Identifier(name)) = tokens_iter.next() else {
+    let Some(Token::Identifier(name)) = tokens.pop_front() else {
         return Err(vec![TokenStreamError{message: "expected variable identifier".to_owned()}]);
     };
 
     let cloned_name = name.to_owned();
 
-    if !matches!(tokens_iter.next(), Some(Token::AssignmentOperator)) {
+    if !matches!(tokens.pop_front(), Some(Token::AssignmentOperator)) {
         return Err(vec![TokenStreamError {
             message: "expected assignment operator \"=\"".to_owned(),
         }]);
     }
 
-    let expression_fn = match try_create_expression(tokens_iter) {
+    let expression_fn = match try_create_expression(&mut tokens) {
         Ok(expression_fn) => expression_fn,
         Err(errors) => return Err(errors),
     };
@@ -179,14 +193,15 @@ enum ExpressionType {
 }
 
 fn try_create_expression(
-    mut tokens_iter: impl Iterator<Item = Token>,
+    mut tokens_iter: &mut VecDeque<Token>,
 ) -> Result<Box<dyn FnOnce(ExpressionBuilder) -> Expression>, Vec<TokenStreamError>> {
-    let (expression, next_token) = match take_expression(&mut tokens_iter) {
+    let mut tokens_iter = Box::new(tokens_iter);
+    let expression = match take_expression(&mut tokens_iter) {
         Err(errors) => return Err(errors),
         Ok(value) => value,
     };
 
-    match dbg!(next_token.or_else(|| tokens_iter.next())) {
+    match tokens_iter.pop_front() {
         None => return Ok(expression),
         _ => todo!(),
     }
@@ -201,33 +216,23 @@ fn try_create_expression(
 }
 
 fn take_expression(
-    mut tokens_iter: &mut impl Iterator<Item = Token>,
-) -> Result<
-    (
-        Box<dyn FnOnce(ExpressionBuilder) -> Expression>,
-        Option<Token>,
-    ),
-    Vec<TokenStreamError>,
-> {
-    println!("here");
-    let identifier = match dbg!(tokens_iter.next()) {
+    mut tokens_iter: &mut VecDeque<Token>,
+) -> Result<Box<dyn FnOnce(ExpressionBuilder) -> Expression>, Vec<TokenStreamError>> {
+    let identifier = match tokens_iter.pop_front() {
         Some(Token::FalseKeyword) => {
-            return Ok((
-                Box::new(|builder: ExpressionBuilder| builder.value_literal(false.into())),
-                None,
-            ))
+            return Ok(Box::new(|builder: ExpressionBuilder| {
+                builder.value_literal(false.into())
+            }))
         }
         Some(Token::TrueKeyword) => {
-            return Ok((
-                Box::new(|builder: ExpressionBuilder| builder.value_literal(true.into())),
-                None,
-            ))
+            return Ok(Box::new(|builder: ExpressionBuilder| {
+                builder.value_literal(true.into())
+            }))
         }
         Some(Token::UIntValue(value)) => {
-            return Ok((
-                Box::new(move |builder: ExpressionBuilder| builder.value_literal(value.into())),
-                None,
-            ))
+            return Ok(Box::new(move |builder: ExpressionBuilder| {
+                builder.value_literal(value.into())
+            }))
         }
         Some(Token::Identifier(identifier)) => identifier.to_owned(),
         Some(token) => {
@@ -242,26 +247,32 @@ fn take_expression(
         }
     };
 
-    match dbg!(tokens_iter.next()) {
-        None => Ok((
-            Box::new(move |builder: ExpressionBuilder| builder.variable(identifier.as_str())),
-            None,
-        )),
-        Some(Token::LeftParenthesis) => match tokens_iter.next() {
+    take_identifier_expression(identifier, tokens_iter)
+}
+
+/// take an expression from the `tokens_iter` that begins with an identifier. Either a `Token::Variable` or `Token::FunctionCall`
+fn take_identifier_expression(
+    identifier: String,
+    mut tokens: &mut VecDeque<Token>,
+) -> Result<Box<dyn FnOnce(ExpressionBuilder) -> Expression>, Vec<TokenStreamError>> {
+    match tokens.pop_front() {
+        None => Ok(Box::new(move |builder: ExpressionBuilder| {
+            builder.variable(identifier.as_str())
+        })),
+        Some(Token::LeftParenthesis) => match tokens.pop_front() {
             Some(Token::RightParenthesis) => {
-                return Ok((
-                    Box::new(move |builder: ExpressionBuilder| {
-                        builder.function_call(|function_call| {
-                            function_call
-                                .function_id(&identifier)
-                                .no_parameters()
-                                .build()
-                        })
-                    }),
-                    None,
-                ));
+                return Ok(Box::new(move |builder: ExpressionBuilder| {
+                    builder.function_call(|function_call| {
+                        function_call
+                            .function_id(&identifier)
+                            .no_parameters()
+                            .build()
+                    })
+                }));
             }
-            Some(_next_token) => {
+            Some(next_token) => {
+                tokens.push_front(next_token);
+                let param_expression = take_expression(tokens);
                 todo!("function call with parameters")
             }
             None => {
@@ -270,10 +281,12 @@ fn take_expression(
                 }])
             }
         },
-        Some(token) => Ok((
-            Box::new(move |builder: ExpressionBuilder| builder.variable(identifier.as_str())),
-            Some(token),
-        )),
+        Some(token) => {
+            tokens.push_front(token);
+            return Ok(Box::new(move |builder: ExpressionBuilder| {
+                builder.variable(identifier.as_str())
+            }));
+        }
     }
 }
 
