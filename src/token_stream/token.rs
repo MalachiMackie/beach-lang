@@ -185,52 +185,15 @@ fn try_start_statement(
 fn try_create_if_statement(
     tokens: &mut VecDeque<Token>,
 ) -> Result<impl FnOnce(IfStatementBuilder) -> Node, Vec<TokenStreamError>> {
-    match tokens.pop_front() {
-        None => {
-            return Err(vec![TokenStreamError {
-                message: "unexpected end of if statement".to_owned(),
-            }])
-        }
-        Some(Token::LeftParenthesis) => {}
-        Some(token) => {
-            return Err(vec![TokenStreamError {
-                message: format!("unexpected token {:?}", token),
-            }])
-        }
-    };
+    ensure_token(tokens, Token::LeftParenthesis)?;
 
     let check_expression = match take_expression(tokens) {
         Err(errors) => return Err(errors),
         Ok(expression) => expression,
     };
 
-    match tokens.pop_front() {
-        None => {
-            return Err(vec![TokenStreamError {
-                message: "unexpected end of if statement".to_owned(),
-            }])
-        }
-        Some(Token::RightParenthesis) => {}
-        Some(token) => {
-            return Err(vec![TokenStreamError {
-                message: format!("unexpected token {:?}", token),
-            }])
-        }
-    }
-
-    match tokens.pop_front() {
-        None => {
-            return Err(vec![TokenStreamError {
-                message: "unexpected end of if statement".to_owned(),
-            }])
-        }
-        Some(Token::LeftCurleyBrace) => {}
-        Some(token) => {
-            return Err(vec![TokenStreamError {
-                message: format!("unexpected token {:?}", token),
-            }])
-        }
-    }
+    ensure_token(tokens, Token::RightParenthesis)?;
+    ensure_token(tokens, Token::LeftCurleyBrace)?;
 
     let statements = get_block_statements(tokens)?;
     let mut else_statements = None;
@@ -249,19 +212,7 @@ fn try_create_if_statement(
         }
     };
 
-    match tokens.pop_front() {
-        None => {
-            return Err(vec![TokenStreamError {
-                message: "unexpected end of if statement".to_owned(),
-            }])
-        }
-        Some(Token::LeftCurleyBrace) => {}
-        Some(token) => {
-            return Err(vec![TokenStreamError {
-                message: format!("unexpected token {:?}", token),
-            }])
-        }
-    }
+    ensure_token(tokens, Token::LeftCurleyBrace)?;
 
     else_statements = Some(get_block_statements(tokens)?);
 
@@ -270,6 +221,14 @@ fn try_create_if_statement(
         statements,
         else_statements,
     ))
+}
+
+fn ensure_token(tokens: &mut VecDeque<Token>, expected: Token) -> Result<(), Vec<TokenStreamError>> {
+    match tokens.pop_front() {
+        None => Err(vec![TokenStreamError{message: format!("Expected {}", expected)}]),
+        Some(token) if token == expected => Ok(()),
+        Some(token) => Err(vec![TokenStreamError{message: format!("Expected {}, found {}", expected, token)}])
+    }
 }
 
 fn build_if_statement(
