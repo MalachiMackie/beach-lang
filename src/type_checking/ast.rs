@@ -57,6 +57,7 @@ mod tests {
                         body.statement(|statement| {
                             statement.return_value(|expression| expression.variable("my_param"))
                         })
+                        .build()
                     })
             })
             .statement(|statement| {
@@ -93,7 +94,7 @@ mod tests {
                     }])
                     .return_type(Type::Boolean)
                     .name("my_function")
-                    .body(|body| body.statement(|statement| statement.return_void()))
+                    .body(|body| body.statement(|statement| statement.return_void()).build())
             })
             .statement(|statement| {
                 statement.function_call(|fn_call| {

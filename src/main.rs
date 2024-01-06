@@ -209,7 +209,7 @@ fn fibonacci_ast_builder(ast_builder: AstBuilder) -> Ast {
                                 .parameter(|param| param.variable("limit"))
                                 .build()
                         })
-                    })
+                    }).build()
                 })
         })
         .statement(|statement| {

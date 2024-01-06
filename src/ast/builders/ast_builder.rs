@@ -20,7 +20,7 @@ impl AstBuilder {
 
     pub fn function_declaration(
         mut self,
-        function_declaration_fn: impl Fn(FunctionDeclarationBuilder) -> FunctionDeclaration,
+        function_declaration_fn: impl FnOnce(FunctionDeclarationBuilder) -> FunctionDeclaration,
     ) -> AstBuilder {
         let function_declaration = function_declaration_fn(FunctionDeclarationBuilder {
             id: None,
@@ -91,7 +91,7 @@ mod tests {
                     .name("my_function")
                     .no_parameters()
                     .void()
-                    .body(|body| body)
+                    .body(|body| body.build())
             })
             .build();
 

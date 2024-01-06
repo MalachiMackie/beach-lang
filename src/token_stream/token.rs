@@ -1,13 +1,11 @@
 use std::{collections::VecDeque, fmt::Display};
 
 use crate::ast::{
-    builders::{
-        ast_builder::AstBuilder, statement_builder::StatementBuilder,
-    },
+    builders::{ast_builder::AstBuilder, statement_builder::StatementBuilder},
     node::{Node, Type},
 };
 
-use super::statement::try_create_statement;
+use super::{function_declaration::build_function_declaration, statement::try_create_statement};
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Token {
@@ -53,7 +51,12 @@ impl AstBuilder {
         let mut tokens: VecDeque<Token> = tokens.into();
         while let Some(next_token) = tokens.pop_front() {
             match next_token {
-                Token::FunctionKeyword => todo!("function_declaration"),
+                Token::FunctionKeyword => match build_function_declaration(&mut tokens) {
+                    Err(function_decl_errors) => errors.extend(function_decl_errors),
+                    Ok(function_declaration) => {
+                        builder = builder.function_declaration(function_declaration);
+                    }
+                },
                 _ => {
                     tokens.push_front(next_token);
 
@@ -128,7 +131,7 @@ pub(super) fn get_block_statements(
         match tokens.pop_front() {
             None => {
                 return Err(vec![TokenStreamError {
-                    message: "unexpected end of if statement".to_owned(),
+                    message: "expected }".to_owned(),
                 }])
             }
             Some(Token::RightCurleyBrace) => {

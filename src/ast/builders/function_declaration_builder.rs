@@ -1,5 +1,5 @@
 use crate::ast::node::{
-    FunctionDeclaration, FunctionId, FunctionParameter, FunctionReturnType, Node, Type,
+    Ast, FunctionDeclaration, FunctionId, FunctionParameter, FunctionReturnType, Node, Type,
 };
 
 use super::ast_builder::AstBuilder;
@@ -51,8 +51,8 @@ impl FunctionDeclarationBuilder {
         self
     }
 
-    pub fn body(mut self, builder: impl FnOnce(AstBuilder) -> AstBuilder) -> FunctionDeclaration {
-        self.body = Some(builder(AstBuilder::default()).build().nodes);
+    pub fn body(mut self, builder: impl FnOnce(AstBuilder) -> Ast) -> FunctionDeclaration {
+        self.body = Some(builder(AstBuilder::default()).nodes);
         FunctionDeclaration {
             id: self.id.expect("Function id should be set"),
             name: self.name.expect("function name should be set"),
@@ -78,16 +78,18 @@ mod tests {
             .parameters(vec![(Type::Boolean, "param1".to_owned()).into()])
             .return_type(Type::UInt)
             .body(|builder: AstBuilder| {
-                builder.statement(|statement| {
-                    statement.var_declaration(|var_declaration_builder| {
-                        var_declaration_builder
-                            .declare_type(Type::Boolean)
-                            .name("my_var_name")
-                            .with_assignment(|expression_builder| {
-                                expression_builder.value_literal(true.into())
-                            })
+                builder
+                    .statement(|statement| {
+                        statement.var_declaration(|var_declaration_builder| {
+                            var_declaration_builder
+                                .declare_type(Type::Boolean)
+                                .name("my_var_name")
+                                .with_assignment(|expression_builder| {
+                                    expression_builder.value_literal(true.into())
+                                })
+                        })
                     })
-                })
+                    .build()
             });
 
         let expected = FunctionDeclaration {
@@ -118,6 +120,7 @@ mod tests {
                 body.statement(|statement| {
                     statement.return_value(|return_value| return_value.value_literal(10.into()))
                 })
+                .build()
             });
 
         let expected = FunctionDeclaration {
@@ -139,7 +142,7 @@ mod tests {
             .name("my_function")
             .no_parameters()
             .void()
-            .body(|body| body.statement(|statement| statement.return_void()));
+            .body(|body| body.statement(|statement| statement.return_void()).build());
 
         let expected = FunctionDeclaration {
             id: FunctionId("my_function".to_owned()),
