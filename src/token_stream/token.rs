@@ -21,6 +21,7 @@ pub enum Token {
     FalseKeyword,
     Comma,
     RightArrow,
+    NotOperator,
     LeftCurleyBrace,
     RightCurleyBrace,
     InferKeyword,
@@ -210,36 +211,53 @@ fn try_create_expression(
 fn take_expression(
     mut tokens_iter: &mut VecDeque<Token>,
 ) -> Result<Box<dyn FnOnce(ExpressionBuilder) -> Expression>, Vec<TokenStreamError>> {
-    let identifier = match tokens_iter.pop_front() {
-        Some(Token::FalseKeyword) => {
-            return Ok(Box::new(|builder: ExpressionBuilder| {
-                builder.value_literal(false.into())
-            }))
+    match tokens_iter.pop_front() {
+        Some(Token::FalseKeyword) => take_value_expression(
+            Box::new(|builder: ExpressionBuilder| builder.value_literal(false.into())),
+            tokens_iter,
+        ),
+        Some(Token::TrueKeyword) => take_value_expression(
+            Box::new(|builder: ExpressionBuilder| builder.value_literal(true.into())),
+            tokens_iter,
+        ),
+        Some(Token::UIntValue(value)) => take_value_expression(
+            Box::new(move |builder: ExpressionBuilder| builder.value_literal(value.into())),
+            tokens_iter,
+        ),
+        Some(Token::Identifier(identifier)) => take_identifier_expression(identifier, tokens_iter),
+        Some(Token::NotOperator) => {
+            match take_expression(tokens_iter) {
+                Err(errors) => Err(errors),
+                Ok(value_expr) => Ok(Box::new(move |builder: ExpressionBuilder| builder.operation(|operation| operation.not(value_expr))))
+            }
         }
-        Some(Token::TrueKeyword) => {
-            return Ok(Box::new(|builder: ExpressionBuilder| {
-                builder.value_literal(true.into())
-            }))
-        }
-        Some(Token::UIntValue(value)) => {
-            return Ok(Box::new(move |builder: ExpressionBuilder| {
-                builder.value_literal(value.into())
-            }))
-        }
-        Some(Token::Identifier(identifier)) => identifier.to_owned(),
-        Some(token) => {
-            return Err(vec![TokenStreamError {
-                message: format!("unexpected token {:?}", token),
-            }])
-        }
-        None => {
-            return Err(vec![TokenStreamError {
-                message: "unexpected end of tokens".to_owned(),
-            }])
-        }
-    };
+        Some(token) => Err(vec![TokenStreamError {
+            message: format!("unexpected token {:?}", token),
+        }]),
+        None => Err(vec![TokenStreamError {
+            message: "unexpected end of tokens".to_owned(),
+        }]),
+    }
+}
 
-    take_identifier_expression(identifier, tokens_iter)
+fn take_value_expression(
+    value_expression: Box<dyn FnOnce(ExpressionBuilder) -> Expression>,
+    tokens: &mut VecDeque<Token>,
+) -> Result<Box<dyn FnOnce(ExpressionBuilder) -> Expression>, Vec<TokenStreamError>> {
+    match tokens.pop_front() {
+        None => Ok(value_expression),
+        Some(Token::PlusOperator) => match take_expression(tokens) {
+            Err(errors) => Err(errors),
+            Ok(right_expression) => Ok(Box::new(move |expression_builder: ExpressionBuilder| {
+                expression_builder
+                    .operation(|operation| operation.plus(value_expression, right_expression))
+            })),
+        },
+        Some(token) => {
+            tokens.push_front(token);
+            Ok(value_expression)
+        }
+    }
 }
 
 /// take an expression from the `tokens_iter` that begins with an identifier. Either a `Token::Variable` or `Token::FunctionCall`
@@ -612,11 +630,86 @@ mod tests {
             Token::Identifier("my_function".to_owned()),
             Token::LeftParenthesis,
             Token::Comma,
-            Token::RightParenthesis
+            Token::RightParenthesis,
+            Token::SemiColon,
         ];
 
         let result = AstBuilder::from_token_stream(tokens);
 
         assert!(matches!(result, Err(_)));
+    }
+
+    #[test]
+    fn function_call_plus_operation() {
+        let tokens = vec![
+            Token::InferKeyword,
+            Token::Identifier("my_var".to_owned()),
+            Token::AssignmentOperator,
+            Token::Identifier("my_function".to_owned()),
+            Token::LeftParenthesis,
+            Token::UIntValue(10),
+            Token::PlusOperator,
+            Token::UIntValue(12),
+            Token::RightParenthesis,
+            Token::SemiColon,
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        let expected = AstBuilder::default().statement(|statement| {
+            statement.var_declaration(|var_decl| {
+                var_decl
+                    .infer_type()
+                    .name("my_var")
+                    .with_assignment(|assignment| {
+                        assignment.function_call(|function_call| {
+                            function_call
+                                .function_id("my_function")
+                                .parameter(|parameter| {
+                                    parameter.operation(|operation| {
+                                        operation.plus(|_| 10.into(), |_| 12.into())
+                                    })
+                                })
+                                .build()
+                        })
+                    })
+            })
+        });
+
+        assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
+    }
+
+    #[test]
+    fn function_call_not_operation() {
+        let tokens = vec![
+            Token::InferKeyword,
+            Token::Identifier("my_var".to_owned()),
+            Token::AssignmentOperator,
+            Token::Identifier("my_function".to_owned()),
+            Token::LeftParenthesis,
+            Token::NotOperator,
+            Token::TrueKeyword,
+            Token::RightParenthesis,
+            Token::SemiColon,
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        let expected = AstBuilder::default().statement(|statement| {
+            statement.var_declaration(|var_decl| {
+                var_decl
+                    .infer_type()
+                    .name("my_var")
+                    .with_assignment(|assignment| {
+                        assignment.function_call(|function_call| {
+                            function_call.function_id("my_function").parameter(|param| {
+                                param.operation(|operation| operation.not(|_| true.into()))
+                            }).build()
+                        })
+                    })
+            })
+        });
+
+        assert!(matches!(dbg!(result), Ok(ast_builder) if ast_builder == expected))
     }
 }

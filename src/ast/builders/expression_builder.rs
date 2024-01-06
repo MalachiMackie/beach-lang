@@ -26,7 +26,7 @@ impl ExpressionBuilder {
         Expression::ValueLiteral(value)
     }
 
-    pub fn operation(self, operation_fn: impl Fn(OperationBuilder) -> Operation) -> Expression {
+    pub fn operation(self, operation_fn: impl FnOnce(OperationBuilder) -> Operation) -> Expression {
         let operation = operation_fn(OperationBuilder {});
 
         Expression::Operation(operation)

@@ -6,7 +6,7 @@ use super::expression_builder::ExpressionBuilder;
 pub struct OperationBuilder {}
 
 impl OperationBuilder {
-    pub fn not<TExpressionFn: Fn(ExpressionBuilder) -> Expression>(
+    pub fn not<TExpressionFn: FnOnce(ExpressionBuilder) -> Expression>(
         self,
         expression_fn: TExpressionFn,
     ) -> Operation {
@@ -30,8 +30,8 @@ impl OperationBuilder {
 
     pub fn plus(
         self,
-        left_fn: impl Fn(ExpressionBuilder) -> Expression,
-        right_fn: impl Fn(ExpressionBuilder) -> Expression,
+        left_fn: impl FnOnce(ExpressionBuilder) -> Expression,
+        right_fn: impl FnOnce(ExpressionBuilder) -> Expression,
     ) -> Operation {
         Operation::Binary {
             operation: BinaryOperation::Plus,
