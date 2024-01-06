@@ -3,7 +3,7 @@ use std::{collections::VecDeque, fmt::Display};
 use crate::ast::{
     builders::{
         ast_builder::AstBuilder, expression_builder::ExpressionBuilder,
-        statement_builder::StatementBuilder,
+        function_call_builder::FunctionCallBuilder, statement_builder::StatementBuilder,
         variable_declaration_builder::VariableDeclarationBuilder,
     },
     node::{Expression, Node, Type, VariableDeclarationType},
@@ -205,14 +205,6 @@ fn try_create_expression(
         None => return Ok(expression),
         _ => todo!(),
     }
-
-    // if matches!(tokens_iter.next(), Some(Token::TrueKeyword)) {
-    //     Ok(Box::new(|builder: ExpressionBuilder| {
-    //         builder.value_literal(true.into())
-    //     }))
-    // } else {
-    //     Ok(Box::new(|_| todo!()))
-    // }
 }
 
 fn take_expression(
@@ -259,34 +251,63 @@ fn take_identifier_expression(
         None => Ok(Box::new(move |builder: ExpressionBuilder| {
             builder.variable(identifier.as_str())
         })),
-        Some(Token::LeftParenthesis) => match tokens.pop_front() {
-            Some(Token::RightParenthesis) => {
-                return Ok(Box::new(move |builder: ExpressionBuilder| {
-                    builder.function_call(|function_call| {
-                        function_call
-                            .function_id(&identifier)
-                            .no_parameters()
-                            .build()
-                    })
-                }));
-            }
-            Some(next_token) => {
-                tokens.push_front(next_token);
-                let param_expression = take_expression(tokens);
-                todo!("function call with parameters")
-            }
-            None => {
-                return Err(vec![TokenStreamError {
-                    message: "unexpected end of expression".to_owned(),
-                }])
-            }
-        },
+        Some(Token::LeftParenthesis) => take_function_call(tokens, identifier),
         Some(token) => {
             tokens.push_front(token);
             return Ok(Box::new(move |builder: ExpressionBuilder| {
                 builder.variable(identifier.as_str())
             }));
         }
+    }
+}
+
+fn take_function_call(
+    tokens: &mut VecDeque<Token>,
+    identifier: String,
+) -> Result<Box<dyn FnOnce(ExpressionBuilder) -> Expression>, Vec<TokenStreamError>> {
+    let mut params = VecDeque::new();
+
+    loop {
+        match tokens.pop_front() {
+            None => {
+                return Err(vec![TokenStreamError {
+                    message: "unexpected end of function call".to_owned(),
+                }])
+            }
+            Some(Token::RightParenthesis) => {
+                return Ok(Box::new(move |expression_builder| {
+                    expression_builder.function_call(|mut function_call| {
+                        function_call = function_call.function_id(&identifier);
+                        if params.is_empty() {
+                            function_call = function_call.no_parameters();
+                        } else {
+                            while let Some(param) = params.pop_front() {
+                                function_call = function_call.parameter(param);
+                            }
+                        }
+                        function_call.build()
+                    })
+                }))
+            }
+            Some(Token::Comma) => {
+                if params.is_empty() {
+                    return Err(vec![TokenStreamError {
+                        message: "unexpected ,".to_owned(),
+                    }]);
+                }
+            }
+            Some(token) => {
+                tokens.push_front(token);
+                match take_expression(tokens) {
+                    Err(errors) => {
+                        return Err(errors);
+                    }
+                    Ok(param) => {
+                        params.push_back(param);
+                    }
+                }
+            }
+        };
     }
 }
 
@@ -377,6 +398,40 @@ mod tests {
             })
         });
 
-        assert!(matches!(dbg!(result), Ok(ast_builder) if ast_builder == expected));
+        assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
+    }
+
+    #[test]
+    fn type_declare_variable_declaration_assign_function_call_with_single_paremeter() {
+        let tokens = vec![
+            Token::TypeKeyword(Type::Boolean),
+            Token::Identifier("my_var".to_owned()),
+            Token::AssignmentOperator,
+            Token::Identifier("my_function".to_owned()),
+            Token::LeftParenthesis,
+            Token::TrueKeyword,
+            Token::RightParenthesis,
+            Token::SemiColon,
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        let expected = AstBuilder::default().statement(|statement| {
+            statement.var_declaration(|var_decl| {
+                var_decl
+                    .name("my_var")
+                    .declare_type(Type::Boolean)
+                    .with_assignment(|value| {
+                        value.function_call(|function_call| {
+                            function_call
+                                .function_id("my_function")
+                                .parameter(|value| value.value_literal(true.into()))
+                                .build()
+                        })
+                    })
+            })
+        });
+
+        assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
     }
 }

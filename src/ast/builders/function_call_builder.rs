@@ -20,7 +20,10 @@ impl FunctionCallBuilder {
         self
     }
 
-    pub fn parameter(mut self, expression_fn: impl Fn(ExpressionBuilder) -> Expression) -> Self {
+    pub fn parameter(
+        mut self,
+        expression_fn: impl FnOnce(ExpressionBuilder) -> Expression,
+    ) -> Self {
         let expression = expression_fn(ExpressionBuilder {});
 
         let Some(parameters) = &mut self.parameters else {
