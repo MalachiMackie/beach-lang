@@ -357,6 +357,7 @@ mod tests {
 
     use super::Token;
 
+    /// infer my_var = true;
     #[test]
     fn infer_boolean_variable_declaration_from_token_stream() {
         let tokens = vec![
@@ -381,8 +382,9 @@ mod tests {
         assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
     }
 
+    /// boolean my_var = my_other_var;
     #[test]
-    fn infer_variable_declaration_assign_variable_name() {
+    fn type_decl_variable_declaration_assign_variable_name() {
         let tokens = vec![
             Token::TypeKeyword(Type::Boolean),
             Token::Identifier("my_var".to_owned()),
@@ -405,8 +407,9 @@ mod tests {
         assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
     }
 
+    /// boolean my_var = my_function();
     #[test]
-    fn infer_variable_declaration_assign_function_call() {
+    fn type_decl_variable_declaration_assign_function_call() {
         let tokens = vec![
             Token::TypeKeyword(Type::Boolean),
             Token::Identifier("my_var".to_owned()),
@@ -438,6 +441,7 @@ mod tests {
         assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
     }
 
+    /// boolean my_var = my_function(true);
     #[test]
     fn type_declare_variable_declaration_assign_function_call_with_single_paremeter() {
         let tokens = vec![
@@ -472,6 +476,7 @@ mod tests {
         assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
     }
 
+    /// boolean my_var = my_function(true, second_function());
     #[test]
     fn variable_declaration_assign_function_call_with_multiple_parameters_function_call_no_parameters(
     ) {
@@ -519,6 +524,7 @@ mod tests {
         assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
     }
 
+    /// boolean my_var = my_function(true, second_function(true));
     #[test]
     fn variable_declaration_assign_function_call_with_multiple_parameters_function_call_single_parameter(
     ) {
@@ -567,6 +573,7 @@ mod tests {
         assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
     }
 
+    /// boolean my_var = my_function(true, false, true);
     #[test]
     fn variable_declaration_assign_function_call_with_three_parameters() {
         let tokens = vec![
@@ -607,6 +614,7 @@ mod tests {
         assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
     }
 
+    /// boolean my_var = my_function(true false true);
     #[test]
     fn function_call_requires_comma_between_params() {
         let tokens = vec![
@@ -627,6 +635,7 @@ mod tests {
         assert!(matches!(result, Err(_)));
     }
 
+    /// infer my_var = my_function(,);
     #[test]
     fn function_call_fails_when_no_expression() {
         let tokens = vec![
@@ -645,6 +654,7 @@ mod tests {
         assert!(matches!(result, Err(_)));
     }
 
+    /// infer my_var = my_function(10+12);
     #[test]
     fn function_call_plus_operation() {
         let tokens = vec![
@@ -685,6 +695,7 @@ mod tests {
         assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
     }
 
+    /// infer my_var = my_function(!true);
     #[test]
     fn function_call_not_operation() {
         let tokens = vec![
@@ -722,6 +733,7 @@ mod tests {
         assert!(matches!(result, Ok(ast_builder) if ast_builder == expected))
     }
 
+    /// infer my_var = my_function(10>12);
     #[test]
     fn function_call_greater_than_operation() {
         let tokens = vec![
@@ -760,5 +772,45 @@ mod tests {
         });
 
         assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
+    }
+
+    /// infer my_var = 10+11+12;
+    #[test]
+    fn multiple_plus_operations() {
+        let tokens = vec![
+            Token::InferKeyword,
+            Token::Identifier("my_var".to_owned()),
+            Token::AssignmentOperator,
+            Token::UIntValue(10),
+            Token::PlusOperator,
+            Token::UIntValue(11),
+            Token::PlusOperator,
+            Token::UIntValue(12),
+            Token::SemiColon,
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        // todo: evaluate left to right
+        let expected = AstBuilder::default().statement(|statement| {
+            statement.var_declaration(|var_declaration| {
+                var_declaration
+                    .infer_type()
+                    .name("my_var")
+                    .with_assignment(|value| {
+                        value.operation(|operation| {
+                            operation.plus(
+                                |_| 10.into(),
+                                |right| {
+                                    right.operation(|operation| operation.plus(|_| 11.into(), |_| 12.into()))
+                                },
+
+                            )
+                        })
+                    })
+            })
+        });
+
+        assert!(matches!(dbg!(result), Ok(ast_builder) if ast_builder == expected));
     }
 }
