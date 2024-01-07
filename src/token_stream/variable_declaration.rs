@@ -18,8 +18,6 @@ pub(super) fn try_create_variable_declaration(
         return Err(vec![TokenStreamError{message: "expected variable identifier".to_owned()}]);
     };
 
-    let cloned_name = name.to_owned();
-
     if !matches!(tokens.pop_front(), Some(Token::AssignmentOperator)) {
         return Err(vec![TokenStreamError {
             message: "expected assignment operator \"=\"".to_owned(),
@@ -37,7 +35,7 @@ pub(super) fn try_create_variable_declaration(
                 var_decl_builder = var_decl_builder.declare_type(var_type);
             }
         }
-        var_decl_builder = var_decl_builder.name(&cloned_name);
+        var_decl_builder = var_decl_builder.name(&name);
         var_decl_builder.with_assignment(expression_fn)
     })
 }
@@ -93,6 +91,39 @@ mod tests {
                     .name("my_var")
                     .declare_type(Type::Boolean)
                     .with_assignment(|value| value.variable("my_other_var"))
+            })
+        });
+
+        assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
+    }
+
+    #[test]
+    fn var_declaration_greater_than_operatior_with_variable_name() {
+        let tokens = vec![
+            Token::InferKeyword,
+            Token::Identifier("my_var".to_owned()),
+            Token::AssignmentOperator,
+            Token::Identifier("other_var".to_owned()), // breaks with identifier
+            Token::RightAngle,
+            Token::UIntValue(11),
+            Token::SemiColon,
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        let expected = AstBuilder::default().statement(|statement| {
+            statement.var_declaration(|var_decl| {
+                var_decl
+                    .infer_type()
+                    .name("my_var")
+                    .with_assignment(|assignment| {
+                        assignment.operation(|operation| {
+                            operation.greater_than(
+                                |expression| expression.variable("other_var"),
+                                |_| 11.into(),
+                            )
+                        })
+                    })
             })
         });
 

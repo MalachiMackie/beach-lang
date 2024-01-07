@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use crate::ast::{
     builders::expression_builder::ExpressionBuilder,
-    node::{BinaryOperation, Expression},
+    node::{BinaryOperation, Expression, Operation},
 };
 
 use super::{token::{Token, TokenStreamError}, function_call::take_function_call};
@@ -84,6 +84,12 @@ fn take_identifier_expression(
         None => Ok(Box::new(move |builder: ExpressionBuilder| {
             builder.variable(identifier.as_str())
         })),
+        Some(Token::RightAngle) => {
+            take_binary_operation_expression(BinaryOperation::GreaterThan, Box::new(move |expression| expression.variable(&identifier)), tokens)
+        },
+        Some(Token::PlusOperator) => {
+            take_binary_operation_expression(BinaryOperation::Plus, Box::new(move |expression| expression.variable(&identifier)), tokens)
+        }
         Some(Token::LeftParenthesis) => {
             tokens.push_front(Token::LeftParenthesis);
             take_function_call_expression(tokens, identifier)

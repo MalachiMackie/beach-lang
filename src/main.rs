@@ -65,7 +65,7 @@ fn fibonacci_tokens() -> Result<Ast, Vec<TokenStreamError>> {
         Token::PlusOperator,
         Token::Identifier(higher_name.clone()),
         Token::SemiColon,
-        // if (next > limit) { return; }
+        // if (next > limit) { return next; }
         Token::IfKeyword,
         Token::LeftParenthesis,
         Token::Identifier(next_name.clone()),
@@ -74,6 +74,7 @@ fn fibonacci_tokens() -> Result<Ast, Vec<TokenStreamError>> {
         Token::RightParenthesis,
         Token::LeftCurleyBrace,
         Token::ReturnKeyword,
+        Token::Identifier(next_name.clone()),
         Token::SemiColon,
         Token::RightCurleyBrace,
         // print(next);
@@ -126,7 +127,7 @@ fn fibonacci_tokens() -> Result<Ast, Vec<TokenStreamError>> {
 ///     infer next = lower + higher;
 ///     if (next > limit)
 ///     {
-///         return;
+///         return next;
 ///     }
 ///
 ///     print(next);
@@ -156,7 +157,7 @@ fn fibonacci_ast_builder(ast_builder: AstBuilder) -> Ast {
                         param_name: "limit".to_owned(),
                     },
                 ])
-                .void()
+                .return_type(Type::UInt)
                 .body(|body| {
                     body.statement(|statement| {
                         statement.var_declaration(|var_declaration| {
@@ -186,7 +187,7 @@ fn fibonacci_ast_builder(ast_builder: AstBuilder) -> Ast {
                                 })
                                 .body(|if_body| {
                                     if_body
-                                        .statement(|statement| statement.return_void())
+                                        .statement(|statement| statement.return_value(|value| value.variable("next")))
                                         .build()
                                 })
                                 .build()

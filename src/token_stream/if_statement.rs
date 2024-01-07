@@ -440,15 +440,49 @@ mod tests {
                                     .body(|body| {
                                         body.statement(|statement| {
                                             statement.function_call(function_call_builder.clone())
-                                        }).build()
+                                        })
+                                        .build()
                                     })
                                     .build()
                             })
                         })
-                        .statement(|statement| statement.function_call(function_call_builder.clone()))
+                        .statement(|statement| {
+                            statement.function_call(function_call_builder.clone())
+                        })
                         .build()
                     })
                     .build()
+            })
+        });
+
+        assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
+    }
+
+    #[test]
+    fn if_statement_with_greater_than_operator() {
+        let tokens = vec![
+            Token::IfKeyword,
+            Token::LeftParenthesis,
+            Token::Identifier("value_a".to_owned()),
+            Token::RightAngle,
+            Token::Identifier("value_b".to_owned()),
+            Token::RightParenthesis,
+            Token::LeftCurleyBrace,
+            Token::RightCurleyBrace,
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        let expected = AstBuilder::default().statement(|statement| {
+            statement.if_statement(|if_statement| {
+                if_statement.check_expression(|expression| {
+                    expression.operation(|operation| {
+                        operation.greater_than(
+                            |left| left.variable("value_a"),
+                            |right| right.variable("value_b"),
+                        )
+                    })
+                }).body(|body| body.build()).build()
             })
         });
 

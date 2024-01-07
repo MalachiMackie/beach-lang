@@ -150,6 +150,11 @@ mod tests {
             Token::LeftParenthesis,
             Token::RightParenthesis,
             Token::LeftCurleyBrace,
+            Token::Identifier("print".to_owned()),
+            Token::LeftParenthesis,
+            Token::UIntValue(1),
+            Token::RightParenthesis,
+            Token::SemiColon,
             Token::ReturnKeyword,
             Token::SemiColon,
             Token::RightCurleyBrace,
@@ -162,7 +167,18 @@ mod tests {
                 .name("my_function")
                 .parameters(Vec::new())
                 .void()
-                .body(|body| body.statement(|statement| statement.return_void()).build())
+                .body(|body| {
+                    body.statement(|statement| {
+                        statement.function_call(|function_call| {
+                            function_call
+                                .function_id("print")
+                                .parameter(|_| 1.into())
+                                .build()
+                        })
+                    })
+                    .statement(|statement| statement.return_void())
+                    .build()
+                })
         });
 
         assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));

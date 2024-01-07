@@ -160,3 +160,303 @@ pub(super) fn get_block_statements(
 
     Ok(statements)
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        ast::{
+            builders::{ast_builder::AstBuilder, function_declaration_builder},
+            node::{FunctionParameter, Type},
+        },
+        token_stream::token::Token,
+    };
+
+    /// function my_function(boolean param_1, uint param_2) -> uint
+    /// {
+    ///     print(param_1);
+    ///     print(param_2);
+    ///     return 1;
+    /// }
+    /// my_function(true, 10);
+    #[test]
+    fn function_declaration_and_statements() {
+        let tokens = vec![
+            Token::FunctionKeyword,
+            Token::Identifier("my_function".to_owned()),
+            Token::LeftParenthesis,
+            Token::TypeKeyword(Type::Boolean),
+            Token::Identifier("param_1".to_owned()),
+            Token::Comma,
+            Token::TypeKeyword(Type::UInt),
+            Token::Identifier("param_2".to_owned()),
+            Token::RightParenthesis,
+            Token::FunctionSignitureSplitter,
+            Token::TypeKeyword(Type::UInt),
+            Token::LeftCurleyBrace,
+            Token::Identifier("print".to_owned()),
+            Token::LeftParenthesis,
+            Token::Identifier("param_1".to_owned()),
+            Token::RightParenthesis,
+            Token::SemiColon,
+            Token::Identifier("print".to_owned()),
+            Token::LeftParenthesis,
+            Token::Identifier("param_2".to_owned()),
+            Token::RightParenthesis,
+            Token::SemiColon,
+            Token::ReturnKeyword,
+            Token::UIntValue(1),
+            Token::SemiColon,
+            Token::RightCurleyBrace,
+            Token::Identifier("my_function".to_owned()),
+            Token::LeftParenthesis,
+            Token::TrueKeyword,
+            Token::Comma,
+            Token::UIntValue(10),
+            Token::RightParenthesis,
+            Token::SemiColon,
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        let expected = AstBuilder::default()
+            .function_declaration(|function_declaration| {
+                function_declaration
+                    .name("my_function")
+                    .parameters(vec![
+                        FunctionParameter::FunctionParameter {
+                            param_type: Type::Boolean,
+                            param_name: "param_1".to_owned(),
+                        },
+                        FunctionParameter::FunctionParameter {
+                            param_type: Type::UInt,
+                            param_name: "param_2".to_owned(),
+                        },
+                    ])
+                    .return_type(Type::UInt)
+                    .body(|body| {
+                        body.statement(|statement| {
+                            statement.function_call(|function_call| {
+                                function_call
+                                    .function_id("print")
+                                    .parameter(|param| param.variable("param_1"))
+                                    .build()
+                            })
+                        })
+                        .statement(|statement| {
+                            statement.function_call(|function_call| {
+                                function_call
+                                    .function_id("print")
+                                    .parameter(|param| param.variable("param_2"))
+                                    .build()
+                            })
+                        })
+                        .statement(|statement| statement.return_value(|_| 1.into()))
+                        .build()
+                    })
+            })
+            .statement(|statement| {
+                statement.function_call(|function_call| {
+                    function_call
+                        .function_id("my_function")
+                        .parameter(|_| true.into())
+                        .parameter(|_| 10.into())
+                        .build()
+                })
+            });
+
+        assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
+    }
+
+    #[test]
+    fn fibonacci() {
+        let fibonacci_name = "fibonacci".to_owned();
+        let lower_name = "lower".to_owned();
+        let higher_name = "higher".to_owned();
+        let limit_name = "limit".to_owned();
+        let next_name = "next".to_owned();
+        let tokens = vec![
+            // function fibonacci(uint lower, uint higher, uint limit) -> uint {
+            Token::FunctionKeyword,
+            Token::Identifier(fibonacci_name.clone()),
+            Token::LeftParenthesis,
+            Token::TypeKeyword(Type::UInt),
+            Token::Identifier(lower_name.clone()),
+            Token::Comma,
+            Token::TypeKeyword(Type::UInt),
+            Token::Identifier(higher_name.clone()),
+            Token::Comma,
+            Token::TypeKeyword(Type::UInt),
+            Token::Identifier(limit_name.clone()),
+            Token::RightParenthesis,
+            Token::FunctionSignitureSplitter,
+            Token::TypeKeyword(Type::UInt),
+            Token::LeftCurleyBrace,
+            // infer next = lower + higher;
+            Token::InferKeyword,
+            Token::Identifier(next_name.clone()),
+            Token::AssignmentOperator,
+            Token::Identifier(lower_name.clone()),
+            Token::PlusOperator,
+            Token::Identifier(higher_name.clone()),
+            Token::SemiColon,
+            // if (next > limit) { return next; }
+            Token::IfKeyword,
+            Token::LeftParenthesis,
+            Token::Identifier(next_name.clone()),
+            Token::RightAngle,
+            Token::Identifier(limit_name.clone()),
+            Token::RightParenthesis,
+            Token::LeftCurleyBrace,
+            Token::ReturnKeyword,
+            Token::Identifier(next_name.clone()),
+            Token::SemiColon,
+            Token::RightCurleyBrace,
+            // print(next);
+            Token::Identifier("print".to_owned()),
+            Token::LeftParenthesis,
+            Token::Identifier(next_name.to_owned()),
+            Token::RightParenthesis,
+            Token::SemiColon,
+            // fibonacci(higher, next, limit);
+            Token::Identifier(fibonacci_name.clone()),
+            Token::LeftParenthesis,
+            Token::Identifier(higher_name.clone()),
+            Token::Comma,
+            Token::Identifier(next_name.clone()),
+            Token::Comma,
+            Token::Identifier(limit_name.clone()),
+            Token::RightParenthesis,
+            Token::SemiColon,
+            // }
+            Token::RightCurleyBrace,
+            // print(0);
+            Token::Identifier("print".to_owned()),
+            Token::LeftParenthesis,
+            Token::UIntValue(0),
+            Token::RightParenthesis,
+            Token::SemiColon,
+            // print(1);
+            Token::Identifier("print".to_owned()),
+            Token::LeftParenthesis,
+            Token::UIntValue(1),
+            Token::RightParenthesis,
+            Token::SemiColon,
+            // fibonacci(0, 1, 10000);
+            Token::Identifier(fibonacci_name.clone()),
+            Token::LeftParenthesis,
+            Token::UIntValue(0),
+            Token::Comma,
+            Token::UIntValue(1),
+            Token::Comma,
+            Token::UIntValue(10000),
+            Token::RightParenthesis,
+            Token::SemiColon,
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        let expected = AstBuilder::default()
+            .function_declaration(|function_declaration| {
+                function_declaration
+                    .name("fibonacci")
+                    .parameters(vec![
+                        FunctionParameter::FunctionParameter {
+                            param_type: Type::UInt,
+                            param_name: "lower".to_owned(),
+                        },
+                        FunctionParameter::FunctionParameter {
+                            param_type: Type::UInt,
+                            param_name: "higher".to_owned(),
+                        },
+                        FunctionParameter::FunctionParameter {
+                            param_type: Type::UInt,
+                            param_name: "limit".to_owned(),
+                        },
+                    ])
+                    .return_type(Type::UInt)
+                    .body(|body| {
+                        body.statement(|statement| {
+                            statement.var_declaration(|var_declaration| {
+                                var_declaration
+                                    .infer_type()
+                                    .name("next")
+                                    .with_assignment(|value| {
+                                        value.operation(|operation| {
+                                            operation.plus(
+                                                |left| left.variable("lower"),
+                                                |right| right.variable("higher"),
+                                            )
+                                        })
+                                    })
+                            })
+                        })
+                        .statement(|statement| {
+                            statement.if_statement(|if_statement| {
+                                if_statement
+                                    .check_expression(|check| {
+                                        check.operation(|operation| {
+                                            operation.greater_than(
+                                                |left| left.variable("next"),
+                                                |right| right.variable("limit"),
+                                            )
+                                        })
+                                    })
+                                    .body(|if_body| {
+                                        if_body
+                                            .statement(|statement| statement.return_value(|value| value.variable("next")))
+                                            .build()
+                                    })
+                                    .build()
+                            })
+                        })
+                        .statement(|statement| {
+                            statement.function_call(|function_call| {
+                                function_call
+                                    .function_id("print")
+                                    .parameter(|param| param.variable("next"))
+                                    .build()
+                            })
+                        })
+                        .statement(|statement| {
+                            statement.function_call(|function_call| {
+                                function_call
+                                    .function_id("fibonacci")
+                                    .parameter(|param| param.variable("higher"))
+                                    .parameter(|param| param.variable("next"))
+                                    .parameter(|param| param.variable("limit"))
+                                    .build()
+                            })
+                        })
+                        .build()
+                    })
+            })
+            .statement(|statement| {
+                statement.function_call(|function_call| {
+                    function_call
+                        .function_id("print")
+                        .parameter(|param| param.value_literal(0.into()))
+                        .build()
+                })
+            })
+            .statement(|statement| {
+                statement.function_call(|function_call| {
+                    function_call
+                        .function_id("print")
+                        .parameter(|param| param.value_literal(1.into()))
+                        .build()
+                })
+            })
+            .statement(|statement| {
+                statement.function_call(|function_call| {
+                    function_call
+                        .function_id("fibonacci")
+                        .parameter(|param| param.value_literal(0.into()))
+                        .parameter(|param| param.value_literal(1.into()))
+                        .parameter(|param| param.value_literal(10000.into()))
+                        .build()
+                })
+            });
+
+        assert!(matches!(dbg!(result), Ok(ast_builder) if ast_builder == dbg!(expected)));
+    }
+}
