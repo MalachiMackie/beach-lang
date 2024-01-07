@@ -6,7 +6,7 @@ use crate::ast::{
 };
 
 use super::{
-    expression::take_expression,
+    expression::create_expression,
     token::{Token, TokenStreamError},
 };
 
@@ -24,7 +24,7 @@ pub(super) fn try_create_variable_declaration(
         }]);
     }
 
-    let expression_fn = take_expression(&mut tokens)?;
+    let expression_fn = create_expression(&mut tokens)?;
 
     Ok(move |mut var_decl_builder: VariableDeclarationBuilder| {
         match var_decl_type {
@@ -97,13 +97,14 @@ mod tests {
         assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
     }
 
+    /// infer my_var = other_var > 11;
     #[test]
     fn var_declaration_greater_than_operatior_with_variable_name() {
         let tokens = vec![
             Token::InferKeyword,
             Token::Identifier("my_var".to_owned()),
             Token::AssignmentOperator,
-            Token::Identifier("other_var".to_owned()), // breaks with identifier
+            Token::Identifier("other_var".to_owned()),
             Token::RightAngle,
             Token::UIntValue(11),
             Token::SemiColon,
@@ -130,6 +131,7 @@ mod tests {
         assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
     }
 
+    /// infer my_var = my_function() > 10;
     #[test]
     fn var_declaration_greater_than_with_function_call() {
         let tokens = vec![

@@ -1,8 +1,8 @@
-use std::{collections::VecDeque, process::id};
+use std::collections::VecDeque;
 
 use crate::ast::{
-    builders::expression_builder::{self, ExpressionBuilder},
-    node::{BinaryOperation, Expression, Operation},
+    builders::expression_builder::ExpressionBuilder,
+    node::{BinaryOperation, Expression},
 };
 
 use super::{
@@ -10,7 +10,7 @@ use super::{
     token::{Token, TokenStreamError},
 };
 
-pub(super) fn take_expression(
+pub(super) fn create_expression(
     tokens: &mut VecDeque<Token>,
 ) -> Result<Box<dyn FnOnce(ExpressionBuilder) -> Expression>, Vec<TokenStreamError>> {
     let mut expression = None;
@@ -57,7 +57,7 @@ pub(super) fn take_expression(
                 expression = Some(take_identifier_expression(identifier, tokens)?)
             }
             Some(Token::NotOperator) => {
-                let value_expr = take_expression(tokens)?;
+                let value_expr = create_expression(tokens)?;
                 expression = Some(Box::new(move |builder: ExpressionBuilder| {
                     builder.operation(|operation| operation.not(value_expr))
                 }));
@@ -125,7 +125,7 @@ fn take_binary_operation_expression(
     left_expression: Box<dyn FnOnce(ExpressionBuilder) -> Expression>,
     tokens: &mut VecDeque<Token>,
 ) -> Result<Box<dyn FnOnce(ExpressionBuilder) -> Expression>, Vec<TokenStreamError>> {
-    let right_expression = take_expression(tokens)?;
+    let right_expression = create_expression(tokens)?;
 
     Ok(Box::new(move |expression_builder: ExpressionBuilder| {
         expression_builder.operation(|operation_builder| match operation {
@@ -157,42 +157,6 @@ fn take_identifier_expression(
             }))
         }
     }
-    // let cloned_identifier = identifier.clone();
-    // let mut expression: Box<dyn FnOnce(ExpressionBuilder) -> Expression> =
-    //     Box::new(move |builder: ExpressionBuilder| builder.variable(cloned_identifier.as_str()));
-    // let mut reassigned = false;
-    // loop {
-    //     match tokens.pop_front() {
-    //         None => return Ok(expression),
-    //         Some(Token::RightAngle) => {
-    //             expression = take_binary_operation_expression(
-    //                 BinaryOperation::GreaterThan,
-    //                 expression,
-    //                 tokens,
-    //             )?;
-    //             reassigned = true;
-    //         }
-    //         Some(Token::PlusOperator) => {
-    //             expression =
-    //                 take_binary_operation_expression(BinaryOperation::Plus, expression, tokens)?;
-    //             reassigned = true;
-    //         }
-    //         Some(Token::LeftParenthesis) if !reassigned => {
-    //             tokens.push_front(Token::LeftParenthesis);
-    //             expression = take_function_call_expression(tokens, identifier.clone())?;
-    //         }
-    //         Some(Token::LeftParenthesis) => {
-    //             // todo: change function call to actually take an expression for the function, so we can return functions
-    //             return Err(vec![TokenStreamError {
-    //                 message: "cannot call this thing".to_owned(),
-    //             }]);
-    //         }
-    //         Some(token) => {
-    //             tokens.push_front(token);
-    //             return Ok(expression);
-    //         }
-    //     }
-    // }
 }
 
 fn take_function_call_expression(
@@ -621,6 +585,7 @@ mod tests {
         assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
     }
 
+    /// infer my_var = function_1() > function_2();
     #[test]
     fn greater_than_function_calls() {
         let tokens = vec![

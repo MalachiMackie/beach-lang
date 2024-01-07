@@ -142,6 +142,11 @@ mod tests {
         token_stream::token::Token,
     };
 
+    /// function my_function()
+    /// {
+    ///     print(1);
+    ///     return;
+    /// }
     #[test]
     fn function_declaration_no_parameters_no_return_value() {
         let tokens = vec![
@@ -184,6 +189,10 @@ mod tests {
         assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
     }
 
+    /// function my_function(uint param_1, boolean param_2)
+    /// {
+    ///     return;
+    /// }
     #[test]
     fn function_declaration_parameters_no_return_value() {
         let tokens = vec![
@@ -224,6 +233,10 @@ mod tests {
         assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
     }
 
+    /// function my_function(uint param_1, boolean param_2) -> boolean
+    /// {
+    ///     return true;
+    /// }
     #[test]
     fn function_declaration_parameters_return_value() {
         let tokens = vec![
@@ -240,6 +253,7 @@ mod tests {
             Token::TypeKeyword(Type::Boolean),
             Token::LeftCurleyBrace,
             Token::ReturnKeyword,
+            Token::TrueKeyword,
             Token::SemiColon,
             Token::RightCurleyBrace,
         ];
@@ -260,7 +274,10 @@ mod tests {
                     },
                 ])
                 .return_type(Type::Boolean)
-                .body(|body| body.statement(|statement| statement.return_void()).build())
+                .body(|body| {
+                    body.statement(|statement| statement.return_value(|_| true.into()))
+                        .build()
+                })
         });
 
         assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));

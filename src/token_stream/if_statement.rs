@@ -9,7 +9,7 @@ use crate::ast::{
 };
 
 use super::{
-    expression::take_expression,
+    expression::create_expression,
     token::{ensure_token, get_block_statements, Token, TokenStreamError},
 };
 
@@ -18,7 +18,7 @@ pub(super) fn try_create_if_statement(
 ) -> Result<impl FnOnce(IfStatementBuilder) -> Node, Vec<TokenStreamError>> {
     ensure_token(tokens, Token::LeftParenthesis)?;
 
-    let check_expression = take_expression(tokens)?;
+    let check_expression = create_expression(tokens)?;
 
     ensure_token(tokens, Token::RightParenthesis)?;
     ensure_token(tokens, Token::LeftCurleyBrace)?;
@@ -70,7 +70,7 @@ pub(super) fn try_create_if_statement(
             }
             Some(Token::IfKeyword) if found_else => {
                 ensure_token(tokens, Token::LeftParenthesis)?;
-                let check_expression = take_expression(tokens)?;
+                let check_expression = create_expression(tokens)?;
                 ensure_token(tokens, Token::RightParenthesis)?;
                 ensure_token(tokens, Token::LeftCurleyBrace)?;
                 let statements = get_block_statements(tokens)?;
@@ -458,6 +458,7 @@ mod tests {
         assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
     }
 
+    /// if (value_a > value_b) {}
     #[test]
     fn if_statement_with_greater_than_operator() {
         let tokens = vec![
@@ -475,14 +476,17 @@ mod tests {
 
         let expected = AstBuilder::default().statement(|statement| {
             statement.if_statement(|if_statement| {
-                if_statement.check_expression(|expression| {
-                    expression.operation(|operation| {
-                        operation.greater_than(
-                            |left| left.variable("value_a"),
-                            |right| right.variable("value_b"),
-                        )
+                if_statement
+                    .check_expression(|expression| {
+                        expression.operation(|operation| {
+                            operation.greater_than(
+                                |left| left.variable("value_a"),
+                                |right| right.variable("value_b"),
+                            )
+                        })
                     })
-                }).body(|body| body.build()).build()
+                    .body(|body| body.build())
+                    .build()
             })
         });
 

@@ -165,7 +165,7 @@ pub(super) fn get_block_statements(
 mod tests {
     use crate::{
         ast::{
-            builders::{ast_builder::AstBuilder, function_declaration_builder},
+            builders::ast_builder::AstBuilder,
             node::{FunctionParameter, Type},
         },
         token_stream::token::Token,
@@ -267,6 +267,22 @@ mod tests {
         assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
     }
 
+    /// function fibonnacci(uint lower, uint higher, uint limit) -> uint
+    /// {
+    ///     infer next = lower + higher;
+    ///     if (next > limit)
+    ///     {
+    ///         return next;
+    ///     }
+    ///
+    ///     print(next);
+    ///
+    ///     fibonnacci(higher, next, limit);
+    /// }
+    ///
+    /// print(0);
+    /// print(1);
+    /// fibonnacci(0, 1, 10000);
     #[test]
     fn fibonacci() {
         let fibonacci_name = "fibonacci".to_owned();

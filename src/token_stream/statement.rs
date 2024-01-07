@@ -6,7 +6,7 @@ use crate::ast::{
 };
 
 use super::{
-    expression::take_expression,
+    expression::create_expression,
     function_call::take_function_call,
     if_statement::try_create_if_statement,
     token::{ensure_token, take_from_front_while, Token, TokenStreamError},
@@ -114,7 +114,7 @@ fn take_return_statement(
         Some(Token::SemiColon) => Ok(build_return_statement(None)),
         Some(token) => {
             tokens.push_front(token);
-            let expression = take_expression(tokens)?;
+            let expression = create_expression(tokens)?;
 
             ensure_token(tokens, Token::SemiColon)?;
 
@@ -137,6 +137,7 @@ fn build_return_statement(
 mod tests {
     use crate::{ast::builders::ast_builder::AstBuilder, token_stream::token::Token};
 
+    /// return;
     #[test]
     fn return_statement() {
         let tokens = vec![Token::ReturnKeyword, Token::SemiColon];
@@ -148,6 +149,7 @@ mod tests {
         assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
     }
 
+    /// return 1 + 2;
     #[test]
     fn return_statement_value() {
         let tokens = vec![
@@ -169,6 +171,7 @@ mod tests {
         assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
     }
 
+    /// print(my_function(true));
     #[test]
     fn function_call_statement() {
         let tokens = vec![

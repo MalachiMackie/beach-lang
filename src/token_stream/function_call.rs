@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use crate::ast::{builders::function_call_builder::FunctionCallBuilder, node::FunctionCall};
 
 use super::{
-    expression::take_expression,
+    expression::create_expression,
     token::{ensure_token, Token, TokenStreamError},
 };
 
@@ -57,7 +57,7 @@ pub(super) fn take_function_call(
                 found_comma = false;
 
                 tokens.push_front(token);
-                params.push_back(take_expression(tokens)?);
+                params.push_back(create_expression(tokens)?);
             }
         };
     }
