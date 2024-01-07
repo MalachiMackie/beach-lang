@@ -129,4 +129,46 @@ mod tests {
 
         assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
     }
+
+    #[test]
+    fn var_declaration_greater_than_with_function_call() {
+        let tokens = vec![
+            Token::InferKeyword,
+            Token::Identifier("my_var".to_owned()),
+            Token::AssignmentOperator,
+            Token::Identifier("my_function".to_owned()),
+            Token::LeftParenthesis,
+            Token::RightParenthesis,
+            Token::RightAngle,
+            Token::UIntValue(10),
+            Token::SemiColon,
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        let expected = AstBuilder::default().statement(|statement| {
+            statement.var_declaration(|var_declaration| {
+                var_declaration
+                    .infer_type()
+                    .name("my_var")
+                    .with_assignment(|value| {
+                        value.operation(|operation| {
+                            operation.greater_than(
+                                |left| {
+                                    left.function_call(|function_call| {
+                                        function_call
+                                            .function_id("my_function")
+                                            .no_parameters()
+                                            .build()
+                                    })
+                                },
+                                |_| 10.into(),
+                            )
+                        })
+                    })
+            })
+        });
+
+        assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
+    }
 }

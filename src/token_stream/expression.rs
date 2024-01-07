@@ -1,41 +1,103 @@
-use std::collections::VecDeque;
+use std::{collections::VecDeque, process::id};
 
 use crate::ast::{
-    builders::expression_builder::ExpressionBuilder,
+    builders::expression_builder::{self, ExpressionBuilder},
     node::{BinaryOperation, Expression, Operation},
 };
 
-use super::{token::{Token, TokenStreamError}, function_call::take_function_call};
+use super::{
+    function_call::take_function_call,
+    token::{Token, TokenStreamError},
+};
 
 pub(super) fn take_expression(
     tokens: &mut VecDeque<Token>,
 ) -> Result<Box<dyn FnOnce(ExpressionBuilder) -> Expression>, Vec<TokenStreamError>> {
-    match tokens.pop_front() {
-        Some(Token::FalseKeyword) => take_value_expression(
-            Box::new(|builder: ExpressionBuilder| builder.value_literal(false.into())),
-            tokens,
-        ),
-        Some(Token::TrueKeyword) => take_value_expression(
-            Box::new(|builder: ExpressionBuilder| builder.value_literal(true.into())),
-            tokens,
-        ),
-        Some(Token::UIntValue(value)) => take_value_expression(
-            Box::new(move |builder: ExpressionBuilder| builder.value_literal(value.into())),
-            tokens,
-        ),
-        Some(Token::Identifier(identifier)) => take_identifier_expression(identifier, tokens),
-        Some(Token::NotOperator) => {
-            let value_expr = take_expression(tokens)?;
-            Ok(Box::new(move |builder: ExpressionBuilder| {
-                builder.operation(|operation| operation.not(value_expr))
-            }))
+    let mut expression = None;
+    loop {
+        match tokens.pop_front() {
+            None => {
+                if let Some(expression) = expression {
+                    return Ok(expression);
+                }
+                return Err(vec![TokenStreamError {
+                    message: "expected expression".to_owned(),
+                }]);
+            }
+            Some(Token::FalseKeyword)
+            | Some(Token::TrueKeyword)
+            | Some(Token::UIntValue(_))
+            | Some(Token::Identifier(_))
+            | Some(Token::NotOperator)
+                if expression.is_some() =>
+            {
+                return Err(vec![TokenStreamError {
+                    message: "expected +, > or (".to_owned(),
+                }]);
+            }
+            Some(Token::FalseKeyword) => {
+                expression = Some(take_value_expression(
+                    Box::new(|builder: ExpressionBuilder| builder.value_literal(false.into())),
+                    tokens,
+                )?);
+            }
+            Some(Token::TrueKeyword) => {
+                expression = Some(take_value_expression(
+                    Box::new(|builder: ExpressionBuilder| builder.value_literal(true.into())),
+                    tokens,
+                )?)
+            }
+            Some(Token::UIntValue(value)) => {
+                expression = Some(take_value_expression(
+                    Box::new(move |builder: ExpressionBuilder| builder.value_literal(value.into())),
+                    tokens,
+                )?)
+            }
+            Some(Token::Identifier(identifier)) => {
+                expression = Some(take_identifier_expression(identifier, tokens)?)
+            }
+            Some(Token::NotOperator) => {
+                let value_expr = take_expression(tokens)?;
+                expression = Some(Box::new(move |builder: ExpressionBuilder| {
+                    builder.operation(|operation| operation.not(value_expr))
+                }));
+            }
+            Some(Token::PlusOperator) => {
+                if let Some(some_expression) = expression {
+                    expression = Some(take_binary_operation_expression(
+                        BinaryOperation::Plus,
+                        some_expression,
+                        tokens,
+                    )?);
+                } else {
+                    return Err(vec![TokenStreamError {
+                        message: "Expected expression".to_owned(),
+                    }]);
+                }
+            }
+            Some(Token::RightAngle) => {
+                if let Some(some_expression) = expression {
+                    expression = Some(take_binary_operation_expression(
+                        BinaryOperation::GreaterThan,
+                        some_expression,
+                        tokens,
+                    )?);
+                } else {
+                    return Err(vec![TokenStreamError {
+                        message: "Expected expression".to_owned(),
+                    }]);
+                }
+            }
+            Some(token) => {
+                if let Some(expression) = expression {
+                    tokens.push_front(token);
+                    return Ok(expression);
+                }
+                return Err(vec![TokenStreamError {
+                    message: format!("unexpected token {:?}", token),
+                }]);
+            }
         }
-        Some(token) => Err(vec![TokenStreamError {
-            message: format!("unexpected token {:?}", token),
-        }]),
-        None => Err(vec![TokenStreamError {
-            message: "unexpected end of tokens".to_owned(),
-        }]),
     }
 }
 
@@ -81,26 +143,56 @@ fn take_identifier_expression(
     tokens: &mut VecDeque<Token>,
 ) -> Result<Box<dyn FnOnce(ExpressionBuilder) -> Expression>, Vec<TokenStreamError>> {
     match tokens.pop_front() {
-        None => Ok(Box::new(move |builder: ExpressionBuilder| {
-            builder.variable(identifier.as_str())
+        None => Ok(Box::new(move |expression_builder| {
+            expression_builder.variable(&identifier)
         })),
-        Some(Token::RightAngle) => {
-            take_binary_operation_expression(BinaryOperation::GreaterThan, Box::new(move |expression| expression.variable(&identifier)), tokens)
-        },
-        Some(Token::PlusOperator) => {
-            take_binary_operation_expression(BinaryOperation::Plus, Box::new(move |expression| expression.variable(&identifier)), tokens)
-        }
         Some(Token::LeftParenthesis) => {
             tokens.push_front(Token::LeftParenthesis);
             take_function_call_expression(tokens, identifier)
-        },
+        }
         Some(token) => {
             tokens.push_front(token);
-            return Ok(Box::new(move |builder: ExpressionBuilder| {
-                builder.variable(identifier.as_str())
-            }));
+            Ok(Box::new(move |expression_builder| {
+                expression_builder.variable(&identifier)
+            }))
         }
     }
+    // let cloned_identifier = identifier.clone();
+    // let mut expression: Box<dyn FnOnce(ExpressionBuilder) -> Expression> =
+    //     Box::new(move |builder: ExpressionBuilder| builder.variable(cloned_identifier.as_str()));
+    // let mut reassigned = false;
+    // loop {
+    //     match tokens.pop_front() {
+    //         None => return Ok(expression),
+    //         Some(Token::RightAngle) => {
+    //             expression = take_binary_operation_expression(
+    //                 BinaryOperation::GreaterThan,
+    //                 expression,
+    //                 tokens,
+    //             )?;
+    //             reassigned = true;
+    //         }
+    //         Some(Token::PlusOperator) => {
+    //             expression =
+    //                 take_binary_operation_expression(BinaryOperation::Plus, expression, tokens)?;
+    //             reassigned = true;
+    //         }
+    //         Some(Token::LeftParenthesis) if !reassigned => {
+    //             tokens.push_front(Token::LeftParenthesis);
+    //             expression = take_function_call_expression(tokens, identifier.clone())?;
+    //         }
+    //         Some(Token::LeftParenthesis) => {
+    //             // todo: change function call to actually take an expression for the function, so we can return functions
+    //             return Err(vec![TokenStreamError {
+    //                 message: "cannot call this thing".to_owned(),
+    //             }]);
+    //         }
+    //         Some(token) => {
+    //             tokens.push_front(token);
+    //             return Ok(expression);
+    //         }
+    //     }
+    // }
 }
 
 fn take_function_call_expression(
@@ -109,13 +201,17 @@ fn take_function_call_expression(
 ) -> Result<Box<dyn FnOnce(ExpressionBuilder) -> Expression>, Vec<TokenStreamError>> {
     let function_call = take_function_call(identifier, tokens)?;
 
-    Ok(Box::new(|expression_builder: ExpressionBuilder| expression_builder.function_call(function_call)))
-
+    Ok(Box::new(|expression_builder: ExpressionBuilder| {
+        expression_builder.function_call(function_call)
+    }))
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{token_stream::token::Token, ast::{builders::ast_builder::AstBuilder, node::Type}};
+    use crate::{
+        ast::{builders::ast_builder::AstBuilder, node::Type},
+        token_stream::token::Token,
+    };
 
     /// boolean my_var = my_function();
     #[test]
@@ -516,6 +612,47 @@ mod tests {
                                         operation.plus(|_| 11.into(), |_| 12.into())
                                     })
                                 },
+                            )
+                        })
+                    })
+            })
+        });
+
+        assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
+    }
+
+    #[test]
+    fn greater_than_function_calls() {
+        let tokens = vec![
+            Token::InferKeyword,
+            Token::Identifier("my_var".to_owned()),
+            Token::AssignmentOperator,
+            Token::Identifier("function_1".to_owned()),
+            Token::LeftParenthesis,
+            Token::RightParenthesis,
+            Token::RightAngle,
+            Token::Identifier("function_2".to_owned()),
+            Token::LeftParenthesis,
+            Token::RightParenthesis,
+            Token::SemiColon,
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        let expected = AstBuilder::default().statement(|statement| {
+            statement.var_declaration(|var_declaration| {
+                var_declaration
+                    .name("my_var")
+                    .infer_type()
+                    .with_assignment(|value| {
+                        value.operation(|operation| {
+                            operation.greater_than(
+                                |left| {
+                                    left.function_call(|function_call| {
+                                        function_call.function_id("function_1").no_parameters().build()
+                                    })
+                                },
+                                |right| right.function_call(|function_call| function_call.function_id("function_2").no_parameters().build()),
                             )
                         })
                     })
