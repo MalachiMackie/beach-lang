@@ -28,21 +28,28 @@ pub fn parse_program(code: &str) -> Result<Vec<Token>, Vec<String>> {
                 }
             }
             '>' => {
-                buffer.push('>');
-                push_current_buffer(&mut tokens, &mut buffer)?;
+                if buffer == "=" {
+                    buffer.push('>');
+                    push_current_buffer(&mut tokens, &mut buffer)?;
+                } else {
+                    push_current_buffer(&mut tokens, &mut buffer)?;
+                    buffer.push('>');
+                }
             }
             _ if char.is_whitespace() => {
                 push_current_buffer(&mut tokens, &mut buffer)?;
             }
-            _ if char.is_ascii_punctuation() => {
-                if buffer == "=" {
-                    // it's not an =>, so get rid of the current assignment operator
-                    push_current_buffer(&mut tokens, &mut buffer)?;
-                }
-                buffer.push(char);
+            _ if char.is_ascii_punctuation() && char != '_' => {
                 push_current_buffer(&mut tokens, &mut buffer)?;
+                buffer.push(char);
             }
             _ => {
+                if buffer.len() == 1 {
+                    let char = buffer.chars().next().unwrap();
+                    if char.is_ascii_punctuation() && char != '_' {
+                        push_current_buffer(&mut tokens, &mut buffer)?;
+                    }
+                }
                 buffer.push(char);
             }
         }
@@ -78,11 +85,18 @@ impl FromStr for Token {
             "!" => Ok(Token::NotOperator),
             "+" => Ok(Token::PlusOperator),
             ";" => Ok(Token::SemiColon),
+            "," => Ok(Token::Comma),
             "=>" => Ok(Token::FunctionSignitureSplitter),
-            _ if s.len() == 1 && s.chars().next().unwrap().is_ascii_punctuation() => {
+            _ if s.len() == 1 && s.chars().next().unwrap().is_ascii_punctuation() && s != "_" => {
                 Err(Some(format!("Unexpected character `{s}`")))
             }
-            _ => Ok(Token::Identifier(trimmed.to_owned())),
+            _ => {
+                if let Ok(u32_value) = s.parse::<u32>() {
+                    Ok(Token::UIntValue(u32_value))
+                } else {
+                    Ok(Token::Identifier(trimmed.to_owned()))
+                }
+            }
         }
     }
 }
@@ -116,7 +130,7 @@ mod tests {
 
     #[test]
     fn parse_special_tokens() {
-        let code = "(){}+>!=;";
+        let code = "(){}+>!=;,";
         let result = parse_program(code);
 
         assert_eq!(
@@ -130,7 +144,8 @@ mod tests {
                 Token::RightArrow,
                 Token::NotOperator,
                 Token::AssignmentOperator,
-                Token::SemiColon
+                Token::SemiColon,
+                Token::Comma,
             ])
         );
     }
@@ -159,6 +174,51 @@ mod tests {
             Ok(vec![
                 Token::Identifier("hello".to_owned()),
                 Token::FunctionSignitureSplitter
+            ])
+        );
+    }
+
+    #[test]
+    fn parse_function_declaration() {
+        let code = "function my_function(uint param_1, boolean param_2) => uint
+        {
+            infer my_var = other_function(15, true, false);
+            return my_var;
+        }";
+
+        let result = parse_program(code);
+
+        assert_eq!(
+            result,
+            Ok(vec![
+                Token::FunctionKeyword,
+                Token::Identifier("my_function".to_owned()),
+                Token::LeftParenthesis,
+                Token::TypeKeyword(Type::UInt),
+                Token::Identifier("param_1".to_owned()),
+                Token::Comma,
+                Token::TypeKeyword(Type::Boolean),
+                Token::Identifier("param_2".to_owned()),
+                Token::RightParenthesis,
+                Token::FunctionSignitureSplitter,
+                Token::TypeKeyword(Type::UInt),
+                Token::LeftCurleyBrace,
+                Token::InferKeyword,
+                Token::Identifier("my_var".to_owned()),
+                Token::AssignmentOperator,
+                Token::Identifier("other_function".to_owned()),
+                Token::LeftParenthesis,
+                Token::UIntValue(15),
+                Token::Comma,
+                Token::TrueKeyword,
+                Token::Comma,
+                Token::FalseKeyword,
+                Token::RightParenthesis,
+                Token::SemiColon,
+                Token::ReturnKeyword,
+                Token::Identifier("my_var".to_owned()),
+                Token::SemiColon,
+                Token::RightCurleyBrace
             ])
         );
     }
