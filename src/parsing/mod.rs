@@ -2,11 +2,14 @@ use std::str::FromStr;
 
 use crate::{ast::node::Type, token_stream::token::Token};
 
-fn push_current_buffer(tokens: &mut Vec<Token>, buffer: &mut String) {
-    if let Ok(token) = buffer.parse() {
-        tokens.push(token);
+fn push_current_buffer(tokens: &mut Vec<Token>, buffer: &mut String) -> Result<(), Vec<String>> {
+    match buffer.parse() {
+        Ok(token) => tokens.push(token),
+        Err(Some(error)) => return Err(vec![error]),
+        Err(None) => {}
     }
     *buffer = String::new();
+    Ok(())
 }
 
 pub fn parse_program(code: &str) -> Result<Vec<Token>, Vec<String>> {
@@ -15,60 +18,48 @@ pub fn parse_program(code: &str) -> Result<Vec<Token>, Vec<String>> {
 
     for char in code.chars() {
         match char {
-            '(' => {
-                push_current_buffer(&mut tokens, &mut buffer);
-                tokens.push(Token::LeftParenthesis)
-            }
-            ')' => {
-                push_current_buffer(&mut tokens, &mut buffer);
-                tokens.push(Token::RightParenthesis)
-            }
-            '{' => {
-                push_current_buffer(&mut tokens, &mut buffer);
-                tokens.push(Token::LeftCurleyBrace);
-            }
-            '}' => {
-                push_current_buffer(&mut tokens, &mut buffer);
-                tokens.push(Token::RightCurleyBrace);
-            }
-            '+' => {
-                push_current_buffer(&mut tokens, &mut buffer);
-                tokens.push(Token::PlusOperator);
-            }
             '=' => {
-                push_current_buffer(&mut tokens, &mut buffer);
-                tokens.push(Token::AssignmentOperator);
+                if buffer.is_empty() {
+                    // this may be a => operator
+                    buffer.push('=');
+                } else {
+                    push_current_buffer(&mut tokens, &mut buffer)?;
+                    tokens.push(Token::AssignmentOperator);
+                }
             }
             '>' => {
-                push_current_buffer(&mut tokens, &mut buffer);
-                tokens.push(Token::RightArrow);
-            }
-            '!' => {
-                push_current_buffer(&mut tokens, &mut buffer);
-                tokens.push(Token::NotOperator);
+                buffer.push('>');
+                push_current_buffer(&mut tokens, &mut buffer)?;
             }
             _ if char.is_whitespace() => {
-                push_current_buffer(&mut tokens, &mut buffer);
+                push_current_buffer(&mut tokens, &mut buffer)?;
             }
-            _ if char.is_alphanumeric() => {
+            _ if char.is_ascii_punctuation() => {
+                if buffer == "=" {
+                    // it's not an =>, so get rid of the current assignment operator
+                    push_current_buffer(&mut tokens, &mut buffer)?;
+                }
+                buffer.push(char);
+                push_current_buffer(&mut tokens, &mut buffer)?;
+            }
+            _ => {
                 buffer.push(char);
             }
-            _ => return Err(vec![format!("Unexpected character {}", char)]),
         }
     }
 
-    push_current_buffer(&mut tokens, &mut buffer);
+    push_current_buffer(&mut tokens, &mut buffer)?;
 
     Ok(tokens)
 }
 
 impl FromStr for Token {
-    type Err = ();
+    type Err = Option<String>;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let trimmed = s.trim();
         match trimmed {
-            "" => Err(()),
+            "" => Err(None),
             "uint" => Ok(Token::TypeKeyword(Type::UInt)),
             "boolean" => Ok(Token::TypeKeyword(Type::Boolean)),
             "true" => Ok(Token::TrueKeyword),
@@ -78,6 +69,19 @@ impl FromStr for Token {
             "if" => Ok(Token::IfKeyword),
             "else" => Ok(Token::ElseKeyword),
             "return" => Ok(Token::ReturnKeyword),
+            "=" => Ok(Token::AssignmentOperator),
+            "(" => Ok(Token::LeftParenthesis),
+            ")" => Ok(Token::RightParenthesis),
+            "{" => Ok(Token::LeftCurleyBrace),
+            "}" => Ok(Token::RightCurleyBrace),
+            ">" => Ok(Token::RightArrow),
+            "!" => Ok(Token::NotOperator),
+            "+" => Ok(Token::PlusOperator),
+            ";" => Ok(Token::SemiColon),
+            "=>" => Ok(Token::FunctionSignitureSplitter),
+            _ if s.len() == 1 && s.chars().next().unwrap().is_ascii_punctuation() => {
+                Err(Some(format!("Unexpected character `{s}`")))
+            }
             _ => Ok(Token::Identifier(trimmed.to_owned())),
         }
     }
@@ -112,7 +116,7 @@ mod tests {
 
     #[test]
     fn parse_special_tokens() {
-        let code = "(){}+>!=";
+        let code = "(){}+>!=;";
         let result = parse_program(code);
 
         assert_eq!(
@@ -125,7 +129,8 @@ mod tests {
                 Token::PlusOperator,
                 Token::RightArrow,
                 Token::NotOperator,
-                Token::AssignmentOperator
+                Token::AssignmentOperator,
+                Token::SemiColon
             ])
         );
     }
@@ -140,6 +145,20 @@ mod tests {
             Ok(vec![
                 Token::TypeKeyword(Type::UInt),
                 Token::Identifier("myIdentifier0".to_owned())
+            ])
+        );
+    }
+
+    #[test]
+    fn parse_function_splitter() {
+        let code = "hello =>";
+        let result = parse_program(code);
+
+        assert_eq!(
+            result,
+            Ok(vec![
+                Token::Identifier("hello".to_owned()),
+                Token::FunctionSignitureSplitter
             ])
         );
     }
