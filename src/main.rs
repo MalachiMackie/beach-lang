@@ -2,6 +2,7 @@ mod ast;
 mod evaluation;
 mod token_stream;
 mod type_checking;
+mod parsing;
 
 use ast::{
     builders::ast_builder::AstBuilder,
