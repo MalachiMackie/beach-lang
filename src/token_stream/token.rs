@@ -19,7 +19,6 @@ pub enum Token {
     TrueKeyword,
     FalseKeyword,
     Comma,
-    RightArrow,
     NotOperator,
     LeftCurleyBrace,
     RightCurleyBrace,

@@ -1,27 +1,39 @@
 mod ast;
 mod evaluation;
+mod parsing;
 mod token_stream;
 mod type_checking;
-mod parsing;
 
 use ast::{
     builders::ast_builder::AstBuilder,
     node::{Ast, FunctionParameter},
 };
+use parsing::parse_program;
 use token_stream::token::{Token, TokenStreamError};
 
 use crate::ast::node::Type;
 
 fn main() {
-    let ast = match fibonacci_tokens() {
+    let tokens = match parse_program(FIBONACCI_CODE) {
+        Ok(tokens) => tokens,
+        Err(errors) => {
+            for error in errors {
+                println!("{error}");
+            }
+
+            return;
+        }
+    };
+
+    let ast = match AstBuilder::from_token_stream(tokens).map(|ast_builder| ast_builder.build()) {
         Err(errors) => {
             for error in errors {
                 println!("{}", error.message);
             }
 
             return;
-        },
-        Ok(ast) => ast
+        }
+        Ok(ast) => ast,
     };
 
     if let Err(errors) = ast.type_check() {
@@ -34,6 +46,25 @@ fn main() {
 
     ast.evaluate();
 }
+
+const FIBONACCI_CODE: &str = "
+function fibonnacci(uint lower, uint higher, uint limit) -> uint
+{
+    infer next = lower + higher;
+    if (next > limit)
+    {
+        return next;
+    }
+
+    print(next);
+
+    fibonnacci(higher, next, limit);
+}
+
+print(0);
+print(1);
+fibonnacci(0, 1, 10000);
+";
 
 fn fibonacci_tokens() -> Result<Ast, Vec<TokenStreamError>> {
     let fibonacci_name = "fibonacci".to_owned();
@@ -188,7 +219,9 @@ fn fibonacci_ast_builder(ast_builder: AstBuilder) -> Ast {
                                 })
                                 .body(|if_body| {
                                     if_body
-                                        .statement(|statement| statement.return_value(|value| value.variable("next")))
+                                        .statement(|statement| {
+                                            statement.return_value(|value| value.variable("next"))
+                                        })
                                         .build()
                                 })
                                 .build()
@@ -211,7 +244,8 @@ fn fibonacci_ast_builder(ast_builder: AstBuilder) -> Ast {
                                 .parameter(|param| param.variable("limit"))
                                 .build()
                         })
-                    }).build()
+                    })
+                    .build()
                 })
         })
         .statement(|statement| {

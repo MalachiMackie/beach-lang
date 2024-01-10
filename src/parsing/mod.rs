@@ -19,16 +19,11 @@ pub fn parse_program(code: &str) -> Result<Vec<Token>, Vec<String>> {
     for char in code.chars() {
         match char {
             '=' => {
-                if buffer.is_empty() {
-                    // this may be a => operator
-                    buffer.push('=');
-                } else {
-                    push_current_buffer(&mut tokens, &mut buffer)?;
-                    tokens.push(Token::AssignmentOperator);
-                }
+                push_current_buffer(&mut tokens, &mut buffer)?;
+                tokens.push(Token::AssignmentOperator);
             }
             '>' => {
-                if buffer == "=" {
+                if buffer == "-" {
                     buffer.push('>');
                     push_current_buffer(&mut tokens, &mut buffer)?;
                 } else {
@@ -81,12 +76,12 @@ impl FromStr for Token {
             ")" => Ok(Token::RightParenthesis),
             "{" => Ok(Token::LeftCurleyBrace),
             "}" => Ok(Token::RightCurleyBrace),
-            ">" => Ok(Token::RightArrow),
+            ">" => Ok(Token::RightAngle),
             "!" => Ok(Token::NotOperator),
             "+" => Ok(Token::PlusOperator),
             ";" => Ok(Token::SemiColon),
             "," => Ok(Token::Comma),
-            "=>" => Ok(Token::FunctionSignitureSplitter),
+            "->" => Ok(Token::FunctionSignitureSplitter),
             _ if s.len() == 1 && s.chars().next().unwrap().is_ascii_punctuation() && s != "_" => {
                 Err(Some(format!("Unexpected character `{s}`")))
             }
@@ -141,7 +136,7 @@ mod tests {
                 Token::LeftCurleyBrace,
                 Token::RightCurleyBrace,
                 Token::PlusOperator,
-                Token::RightArrow,
+                Token::RightAngle,
                 Token::NotOperator,
                 Token::AssignmentOperator,
                 Token::SemiColon,
