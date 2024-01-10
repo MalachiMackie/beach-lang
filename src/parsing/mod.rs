@@ -1,42 +1,85 @@
+use std::str::FromStr;
+
 use crate::{ast::node::Type, token_stream::token::Token};
 
-pub fn parse_program(code: &str) -> Vec<Token> {
+fn push_current_buffer(tokens: &mut Vec<Token>, buffer: &mut String) {
+    if let Ok(token) = buffer.parse() {
+        tokens.push(token);
+    }
+    *buffer = String::new();
+}
+
+pub fn parse_program(code: &str) -> Result<Vec<Token>, Vec<String>> {
     let mut tokens = Vec::new();
     let mut buffer = String::new();
 
     for char in code.chars() {
-        if is_word_delimeter(char) {
-            if !buffer.is_empty() && buffer.chars().any(|ch| !ch.is_whitespace()) {
-                tokens.push(string_to_token(&buffer));
+        match char {
+            '(' => {
+                push_current_buffer(&mut tokens, &mut buffer);
+                tokens.push(Token::LeftParenthesis)
             }
-            buffer = String::new();
+            ')' => {
+                push_current_buffer(&mut tokens, &mut buffer);
+                tokens.push(Token::RightParenthesis)
+            }
+            '{' => {
+                push_current_buffer(&mut tokens, &mut buffer);
+                tokens.push(Token::LeftCurleyBrace);
+            }
+            '}' => {
+                push_current_buffer(&mut tokens, &mut buffer);
+                tokens.push(Token::RightCurleyBrace);
+            }
+            '+' => {
+                push_current_buffer(&mut tokens, &mut buffer);
+                tokens.push(Token::PlusOperator);
+            }
+            '=' => {
+                push_current_buffer(&mut tokens, &mut buffer);
+                tokens.push(Token::AssignmentOperator);
+            }
+            '>' => {
+                push_current_buffer(&mut tokens, &mut buffer);
+                tokens.push(Token::RightArrow);
+            }
+            '!' => {
+                push_current_buffer(&mut tokens, &mut buffer);
+                tokens.push(Token::NotOperator);
+            }
+            _ if char.is_whitespace() => {
+                push_current_buffer(&mut tokens, &mut buffer);
+            }
+            _ if char.is_alphanumeric() => {
+                buffer.push(char);
+            }
+            _ => return Err(vec![format!("Unexpected character {}", char)]),
         }
-        buffer.push(char)
     }
 
-    if !buffer.is_empty() && buffer.chars().any(|ch| !ch.is_whitespace()) {
-        tokens.push(string_to_token(&buffer));
-    }
+    push_current_buffer(&mut tokens, &mut buffer);
 
-    tokens
+    Ok(tokens)
 }
 
-fn is_word_delimeter(value: char) -> bool {
-    value.is_whitespace() || value.is_ascii_punctuation()
-}
+impl FromStr for Token {
+    type Err = ();
 
-fn string_to_token(value: &str) -> Token {
-    match value.trim() {
-        "uint" => Token::TypeKeyword(Type::UInt),
-        "boolean" => Token::TypeKeyword(Type::Boolean),
-        "true" => Token::TrueKeyword,
-        "false" => Token::FalseKeyword,
-        "function" => Token::FunctionKeyword,
-        "infer" => Token::InferKeyword,
-        "if" => Token::IfKeyword,
-        "else" => Token::ElseKeyword,
-        "return" => Token::ReturnKeyword,
-        _ => Token::Identifier(value.to_owned()),
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let trimmed = s.trim();
+        match trimmed {
+            "" => Err(()),
+            "uint" => Ok(Token::TypeKeyword(Type::UInt)),
+            "boolean" => Ok(Token::TypeKeyword(Type::Boolean)),
+            "true" => Ok(Token::TrueKeyword),
+            "false" => Ok(Token::FalseKeyword),
+            "function" => Ok(Token::FunctionKeyword),
+            "infer" => Ok(Token::InferKeyword),
+            "if" => Ok(Token::IfKeyword),
+            "else" => Ok(Token::ElseKeyword),
+            "return" => Ok(Token::ReturnKeyword),
+            _ => Ok(Token::Identifier(trimmed.to_owned())),
+        }
     }
 }
 
@@ -53,7 +96,7 @@ mod tests {
 
         assert_eq!(
             result,
-            vec![
+            Ok(vec![
                 Token::TypeKeyword(Type::UInt),
                 Token::TypeKeyword(Type::Boolean),
                 Token::TrueKeyword,
@@ -63,7 +106,41 @@ mod tests {
                 Token::IfKeyword,
                 Token::ElseKeyword,
                 Token::ReturnKeyword
-            ]
+            ])
+        );
+    }
+
+    #[test]
+    fn parse_special_tokens() {
+        let code = "(){}+>!=";
+        let result = parse_program(code);
+
+        assert_eq!(
+            result,
+            Ok(vec![
+                Token::LeftParenthesis,
+                Token::RightParenthesis,
+                Token::LeftCurleyBrace,
+                Token::RightCurleyBrace,
+                Token::PlusOperator,
+                Token::RightArrow,
+                Token::NotOperator,
+                Token::AssignmentOperator
+            ])
+        );
+    }
+
+    #[test]
+    fn parse_identifier() {
+        let code = "uint myIdentifier0";
+        let result = parse_program(code);
+
+        assert_eq!(
+            result,
+            Ok(vec![
+                Token::TypeKeyword(Type::UInt),
+                Token::Identifier("myIdentifier0".to_owned())
+            ])
         );
     }
 }
