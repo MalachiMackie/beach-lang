@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::ast::node::{Function, FunctionId, FunctionParameter};
+use crate::ast::node::{Function, FunctionId, FunctionParameter, FunctionReturnType};
 
 use super::{nodes::node::type_check_nodes, TypeCheckingError};
 
@@ -9,7 +9,14 @@ impl Function {
         &self,
         functions: &HashMap<FunctionId, Function>,
     ) -> Result<(), Vec<TypeCheckingError>> {
-        let Function::CustomFunction { id, parameters, body, .. } = self else {
+        let Function::CustomFunction {
+            id,
+            parameters,
+            body,
+            return_type,
+            ..
+        } = self
+        else {
             return Ok(());
         };
 
@@ -24,7 +31,23 @@ impl Function {
             })
             .collect();
 
-        type_check_nodes(&body, functions, &local_variables, Some(&id))
+        let found_return_type =
+            match type_check_nodes(&body, functions, &local_variables, Some(&id)) {
+                Err(errors) => return Err(errors),
+                Ok(return_type) => return_type,
+            };
+
+        match (found_return_type, return_type) {
+            (None, FunctionReturnType::Type(_)) => Err(vec![TypeCheckingError {
+                message: "expected return value, but void was returned".to_owned(),
+            }]),
+            (Some(_), FunctionReturnType::Void) => Err(vec![TypeCheckingError {
+                message: "expected void, but return value was found".to_owned(),
+            }]),
+            // expect return type checking to happen at the return site
+            (Some(_), FunctionReturnType::Type(_)) => Ok(()),
+            (None, FunctionReturnType::Void) => Ok(()),
+        }
     }
 }
 
@@ -98,5 +121,41 @@ mod tests {
         let result = function.type_check(&functions);
 
         assert!(matches!(result, Err(_)));
+    }
+
+    #[test]
+    fn type_check_missing_return_value() {
+        let function = Function::CustomFunction {
+            id: FunctionId("my_function".to_owned()),
+            name: "my_function".to_owned(),
+            parameters: Vec::new(),
+            return_type: FunctionReturnType::Type(Type::Boolean),
+            body: Vec::new(),
+        };
+
+        let functions = HashMap::from_iter([(function.id().clone(), function.clone())]);
+
+        let result = function.type_check(&functions);
+
+        assert!(
+            matches!(dbg!(result), Err(e) if e.len() == 1 && e[0].message == "expected return value, but void was returned")
+        )
+    }
+
+    #[test]
+    fn type_check_void_no_return() {
+        let function = Function::CustomFunction {
+            id: FunctionId("my_function".to_owned()),
+            name: "my_function".to_owned(),
+            parameters: Vec::new(),
+            return_type: FunctionReturnType::Void,
+            body: Vec::new(),
+        };
+
+        let functions = HashMap::from_iter([(function.id().clone(), function.clone())]);
+
+        let result = function.type_check(&functions);
+
+        assert!(matches!(result, Ok(())));
     }
 }

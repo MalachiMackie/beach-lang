@@ -12,18 +12,21 @@ pub fn type_check_nodes(
     functions: &HashMap<FunctionId, Function>,
     local_variables: &HashMap<String, Type>,
     current_function: Option<&FunctionId>,
-) -> Result<(), Vec<TypeCheckingError>> {
+) -> Result<Option<Type>, Vec<TypeCheckingError>> {
     let mut errors = Vec::new();
     let mut local_variables = local_variables.clone();
+    let mut return_type = None;
     for node in nodes {
-        if let Err(node_errors) = node.type_check(functions, &mut local_variables, current_function)
-        {
-            errors.extend(node_errors);
+        match node.type_check(functions, &mut local_variables, current_function) {
+            Err(node_errors) => {
+                errors.extend(node_errors);
+            }
+            Ok(found_return_type) => return_type = found_return_type,
         }
     }
 
     if errors.is_empty() {
-        Ok(())
+        Ok(return_type)
     } else {
         Err(errors)
     }
@@ -35,7 +38,7 @@ impl Node {
         functions: &HashMap<FunctionId, Function>,
         local_variables: &mut HashMap<String, Type>,
         current_function: Option<&FunctionId>,
-    ) -> Result<(), Vec<TypeCheckingError>> {
+    ) -> Result<Option<Type>, Vec<TypeCheckingError>> {
         match self {
             Node::VariableDeclaration {
                 var_type,
@@ -47,7 +50,8 @@ impl Node {
                 value,
                 functions,
                 local_variables,
-            ),
+            )
+            .map(|_| None),
 
             Node::FunctionReturn { return_value } => type_check_return_value(
                 return_value.as_ref(),
@@ -55,9 +59,9 @@ impl Node {
                 local_variables,
                 current_function,
             ),
-            Node::FunctionCall(function_call) => {
-                function_call.type_check(functions, local_variables)
-            }
+            Node::FunctionCall(function_call) => function_call
+                .type_check(functions, local_variables)
+                .map(|_| None),
             Node::IfStatement(if_statement) => {
                 if_statement.type_check(functions, local_variables, current_function)
             }
@@ -259,7 +263,33 @@ mod tests {
 
         let result = type_check_nodes(&nodes, &HashMap::new(), &HashMap::new(), None);
 
-        assert!(matches!(result, Ok(())));
+        assert!(matches!(result, Ok(None)));
+    }
+
+    #[test]
+    fn type_check_nodes_return_value() {
+        let nodes = vec![Node::FunctionReturn {
+            return_value: Some(true.into()),
+        }];
+
+        let function = Function::CustomFunction {
+            id: FunctionId("my_function".to_owned()),
+            name: "my_function".to_owned(),
+            parameters: Vec::new(),
+            return_type: FunctionReturnType::Type(Type::Boolean),
+            body: Vec::new(),
+        };
+
+        let functions = HashMap::from_iter([(function.id().clone(), function)]);
+
+        let result = type_check_nodes(
+            &nodes,
+            &functions,
+            &HashMap::new(),
+            Some(&FunctionId("my_function".to_owned())),
+        );
+
+        assert!(matches!(result, Ok(Some(Type::Boolean))));
     }
 
     #[test]
@@ -291,6 +321,6 @@ mod tests {
 
         let result = node.type_check(&HashMap::new(), &mut HashMap::new(), None);
 
-        assert!(matches!(result, Ok(())));
+        assert!(matches!(result, Ok(None)));
     }
 }

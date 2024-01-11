@@ -163,7 +163,7 @@ mod tests {
 
         let result = function_call.type_check(&functions, &mut HashMap::new(), None);
 
-        assert!(matches!(result, Ok(())));
+        assert!(matches!(result, Ok(None)));
     }
 
     #[test]

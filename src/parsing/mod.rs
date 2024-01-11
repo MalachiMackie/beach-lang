@@ -161,7 +161,7 @@ mod tests {
 
     #[test]
     fn parse_function_splitter() {
-        let code = "hello =>";
+        let code = "hello ->";
         let result = parse_program(code);
 
         assert_eq!(
@@ -175,7 +175,7 @@ mod tests {
 
     #[test]
     fn parse_function_declaration() {
-        let code = "function my_function(uint param_1, boolean param_2) => uint
+        let code = "function my_function(uint param_1, boolean param_2) -> uint
         {
             infer my_var = other_function(15, true, false);
             return my_var;

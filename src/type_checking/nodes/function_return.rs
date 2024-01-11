@@ -10,7 +10,7 @@ pub(super) fn type_check_return_value(
     functions: &HashMap<FunctionId, Function>,
     local_variables: &mut HashMap<String, Type>,
     current_function: Option<&FunctionId>,
-) -> Result<(), Vec<TypeCheckingError>> {
+) -> Result<Option<Type>, Vec<TypeCheckingError>> {
     let mut errors = Vec::new();
 
     let return_value_type = return_value.and_then(|x| x.get_type(functions, local_variables));
@@ -77,7 +77,7 @@ pub(super) fn type_check_return_value(
     }
 
     if errors.is_empty() {
-        Ok(())
+        Ok(return_value_type)
     } else {
         Err(errors)
     }
@@ -100,7 +100,7 @@ mod tests {
 
         let result = node.type_check(&HashMap::new(), &mut HashMap::new(), None);
 
-        assert!(matches!(result, Ok(())))
+        assert!(matches!(result, Ok(Some(Type::UInt))))
     }
 
     #[test]
@@ -109,7 +109,7 @@ mod tests {
 
         let result = node.type_check(&HashMap::new(), &mut HashMap::new(), None);
 
-        assert!(matches!(result, Ok(())))
+        assert!(matches!(result, Ok(None)))
     }
 
     #[test]
@@ -133,7 +133,7 @@ mod tests {
 
         let result = node.type_check(&functions, &mut HashMap::new(), Some(&current_function));
 
-        assert!(matches!(result, Ok(())))
+        assert!(matches!(result, Ok(Some(Type::Boolean))))
     }
 
     #[test]
@@ -155,7 +155,7 @@ mod tests {
 
         let result = node.type_check(&functions, &mut HashMap::new(), Some(&current_function));
 
-        assert!(matches!(result, Ok(())));
+        assert!(matches!(result, Ok(None)));
     }
 
     #[test]

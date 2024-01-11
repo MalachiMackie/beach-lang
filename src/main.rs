@@ -58,7 +58,7 @@ function fibonnacci(uint lower, uint higher, uint limit) -> uint
 
     print(next);
 
-    fibonnacci(higher, next, limit);
+    return fibonnacci(higher, next, limit);
 }
 
 print(0);
@@ -115,7 +115,8 @@ fn fibonacci_tokens() -> Result<Ast, Vec<TokenStreamError>> {
         Token::Identifier(next_name.to_owned()),
         Token::RightParenthesis,
         Token::SemiColon,
-        // fibonacci(higher, next, limit);
+        // return fibonacci(higher, next, limit);
+        Token::ReturnKeyword,
         Token::Identifier(fibonacci_name.clone()),
         Token::LeftParenthesis,
         Token::Identifier(higher_name.clone()),
@@ -164,7 +165,7 @@ fn fibonacci_tokens() -> Result<Ast, Vec<TokenStreamError>> {
 ///
 ///     print(next);
 ///
-///     fibonnacci(higher, next, limit);
+///     return fibonnacci(higher, next, limit);
 /// }
 ///
 /// print(0);
@@ -236,13 +237,15 @@ fn fibonacci_ast_builder(ast_builder: AstBuilder) -> Ast {
                         })
                     })
                     .statement(|statement| {
-                        statement.function_call(|function_call| {
-                            function_call
-                                .function_id("fibonacci")
-                                .parameter(|param| param.variable("higher"))
-                                .parameter(|param| param.variable("next"))
-                                .parameter(|param| param.variable("limit"))
-                                .build()
+                        statement.return_value(|value| {
+                            value.function_call(|function_call| {
+                                function_call
+                                    .function_id("fibonacci")
+                                    .parameter(|param| param.variable("higher"))
+                                    .parameter(|param| param.variable("next"))
+                                    .parameter(|param| param.variable("limit"))
+                                    .build()
+                            })
                         })
                     })
                     .build()

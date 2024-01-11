@@ -13,7 +13,7 @@ impl IfStatement {
         functions: &HashMap<FunctionId, Function>,
         local_variables: &HashMap<String, Type>,
         current_function: Option<&FunctionId>,
-    ) -> Result<(), Vec<TypeCheckingError>> {
+    ) -> Result<Option<Type>, Vec<TypeCheckingError>> {
         let mut errors = Vec::new();
 
         // get the if check expression type
@@ -31,11 +31,14 @@ impl IfStatement {
         }
 
         // type check the if block nodes
-        if let Err(if_errors) =
-            type_check_nodes(&self.if_block, functions, local_variables, current_function)
-        {
-            errors.extend(if_errors);
-        }
+        let return_type =
+            match type_check_nodes(&self.if_block, functions, local_variables, current_function) {
+                Ok(return_type) => return_type,
+                Err(if_errors) => {
+                    errors.extend(if_errors);
+                    None
+                }
+            };
 
         // type check any else if blocks
         errors.extend(
@@ -57,7 +60,7 @@ impl IfStatement {
         }
 
         if errors.is_empty() {
-            Ok(())
+            Ok(return_type)
         } else {
             Err(errors)
         }
@@ -106,8 +109,8 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::ast::node::{
-        BinaryOperation, ElseIfBlock, Expression, IfStatement, Node, Operation, Type,
-        VariableDeclarationType,
+        BinaryOperation, ElseIfBlock, Expression, Function, FunctionId, FunctionReturnType,
+        IfStatement, Node, Operation, Type, VariableDeclarationType,
     };
 
     #[test]
@@ -136,7 +139,37 @@ mod tests {
 
         let result = if_statement.type_check(&HashMap::new(), &HashMap::new(), None);
 
-        assert!(matches!(result, Ok(())));
+        assert!(matches!(result, Ok(None)));
+    }
+
+    #[test]
+    fn type_check_if_statement_return_value() {
+        let if_statement = Node::IfStatement(IfStatement {
+            check_expression: true.into(),
+            if_block: vec![Node::FunctionReturn {
+                return_value: Some(true.into()),
+            }],
+            else_if_blocks: Vec::new(),
+            else_block: None,
+        });
+
+        let function = Function::CustomFunction {
+            id: FunctionId("my_function".to_owned()),
+            name: "my_function".to_owned(),
+            parameters: Vec::new(),
+            return_type: FunctionReturnType::Type(Type::Boolean),
+            body: Vec::new(),
+        };
+
+        let functions = HashMap::from_iter([(function.id().clone(), function)]);
+
+        let result = if_statement.type_check(
+            &functions,
+            &mut HashMap::new(),
+            Some(&FunctionId("my_function".to_owned())),
+        );
+
+        assert!(matches!(result, Ok(Some(Type::Boolean))));
     }
 
     #[test]
