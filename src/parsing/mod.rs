@@ -217,4 +217,12 @@ mod tests {
             ])
         );
     }
+
+    #[test]
+    fn parse_invalid_symbol() {
+        let code = "#";
+
+        let result = parse_program(code);
+        assert!(matches!(result, Err(_)));
+    }
 }
