@@ -20,7 +20,7 @@ pub(super) fn build_function_declaration(
         Some(Token::Identifier(function_name)) => function_name,
         Some(token) => {
             return Err(vec![TokenStreamError {
-                message: format!("expected function_name. found {}", token),
+                message: format!("expected function name. found {}", token),
             }])
         }
     };
@@ -52,7 +52,7 @@ pub(super) fn build_function_declaration(
                 match tokens.pop_front() {
                     None => {
                         return Err(vec![TokenStreamError {
-                            message: "expected type or )".to_owned(),
+                            message: "expected parameter name".to_owned(),
                         }])
                     }
                     Some(Token::Identifier(identifier)) => {
@@ -63,7 +63,7 @@ pub(super) fn build_function_declaration(
                     }
                     Some(_) => {
                         return Err(vec![TokenStreamError {
-                            message: "expected type or )".to_owned(),
+                            message: "expected parameter name".to_owned(),
                         }]);
                     }
                 }
@@ -88,7 +88,7 @@ pub(super) fn build_function_declaration(
         Some(Token::FunctionSignitureSplitter) => match tokens.pop_front() {
             None => {
                 return Err(vec![TokenStreamError {
-                    message: "Expected -> or {".to_owned(),
+                    message: "Expected return type".to_owned(),
                 }]);
             }
             Some(Token::TypeKeyword(type_)) => {
@@ -97,7 +97,7 @@ pub(super) fn build_function_declaration(
             }
             Some(_) => {
                 return Err(vec![TokenStreamError {
-                    message: "Expected -> or {".to_owned(),
+                    message: "Expected return type".to_owned(),
                 }])
             }
         },
@@ -184,6 +184,31 @@ mod tests {
                     .statement(|statement| statement.return_void())
                     .build()
                 })
+        });
+
+        assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
+    }
+
+    /// function my_function() {}
+    #[test]
+    fn function_declaration_empty_body() {
+        let tokens = vec![
+            Token::FunctionKeyword,
+            Token::Identifier("my_function".to_owned()),
+            Token::LeftParenthesis,
+            Token::RightParenthesis,
+            Token::LeftCurleyBrace,
+            Token::RightCurleyBrace,
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        let expected = AstBuilder::default().function_declaration(|function_declaration| {
+            function_declaration
+                .name("my_function")
+                .parameters(Vec::new())
+                .void()
+                .body(|body| body.build())
         });
 
         assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
@@ -281,5 +306,246 @@ mod tests {
         });
 
         assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
+    }
+
+    /// function
+    #[test]
+    fn function_declaration_no_tokens() {
+        let tokens = vec![Token::FunctionKeyword];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        assert!(
+            matches!(result, Err(e) if e.len() == 1 && e[0].message == "expected function name")
+        );
+    }
+
+    /// function (
+    #[test]
+    fn function_declaration_invalid_function_name() {
+        let tokens = vec![Token::FunctionKeyword, Token::LeftParenthesis];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        assert!(
+            matches!(result, Err(e) if e.len() == 1 && e[0].message == "expected function name. found LeftParenthesis")
+        )
+    }
+
+    /// function my_function
+    #[test]
+    fn function_declaration_missing_left_parenthesis() {
+        let tokens = vec![
+            Token::FunctionKeyword,
+            Token::Identifier("my_function".to_owned()),
+            Token::RightParenthesis,
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        assert!(
+            matches!(result, Err(e) if e.len() == 1 && e[0].message == "Expected LeftParenthesis, found RightParenthesis")
+        );
+    }
+
+    /// function my_function
+    #[test]
+    fn function_declaration_missing_left_parenthesis_no_tokens() {
+        let tokens = vec![
+            Token::FunctionKeyword,
+            Token::Identifier("my_function".to_owned()),
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        assert!(
+            matches!(result, Err(e) if e.len() == 1 && e[0].message == "Expected LeftParenthesis")
+        );
+    }
+
+    /// function my_function(my_param
+    #[test]
+    fn function_declaration_missing_type() {
+        let tokens = vec![
+            Token::FunctionKeyword,
+            Token::Identifier("my_function".to_owned()),
+            Token::LeftParenthesis,
+            Token::Identifier("my_param".to_owned()),
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        assert!(
+            matches!(result, Err(e) if e.len() == 1 && e[0].message == "expected type, ',', or )")
+        );
+    }
+
+    /// function my_function(boolean)
+    #[test]
+    fn function_declaration_missing_param_name() {
+        let tokens = vec![
+            Token::FunctionKeyword,
+            Token::Identifier("my_function".to_owned()),
+            Token::LeftParenthesis,
+            Token::TypeKeyword(Type::Boolean),
+            Token::RightParenthesis,
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        assert!(
+            matches!(result, Err(e) if e.len() == 1 && e[0].message == "expected parameter name")
+        );
+    }
+
+    /// function my_function(boolean
+    #[test]
+    fn function_declaration_missing_param_name_no_tokens() {
+        let tokens = vec![
+            Token::FunctionKeyword,
+            Token::Identifier("my_function".to_owned()),
+            Token::LeftParenthesis,
+            Token::TypeKeyword(Type::Boolean),
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        assert!(
+            matches!(result, Err(e) if e.len() == 1 && e[0].message == "expected parameter name")
+        );
+    }
+
+    /// function my_function(boolean my_param boolean other_param)
+    #[test]
+    fn function_declaration_missing_comma() {
+        let tokens = vec![
+            Token::FunctionKeyword,
+            Token::Identifier("my_function".to_owned()),
+            Token::LeftParenthesis,
+            Token::TypeKeyword(Type::Boolean),
+            Token::Identifier("my_param".to_owned()),
+            Token::TypeKeyword(Type::Boolean),
+            Token::Identifier("other_param".to_owned()),
+            Token::RightParenthesis,
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        assert!(matches!(result, Err(e) if e.len() >= 1 && e[0].message == "expected , or )"));
+    }
+
+    /// function my_function( {
+    #[test]
+    fn function_declaration_missing_right_parenthesis() {
+        let tokens = vec![
+            Token::FunctionKeyword,
+            Token::Identifier("my_function".to_owned()),
+            Token::LeftParenthesis,
+            Token::LeftCurleyBrace,
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        assert!(
+            matches!(result, Err(e) if e.len() == 1 && e[0].message == "expected type, ',', or )")
+        );
+    }
+
+    /// function my_function(
+    #[test]
+    fn function_declaration_missing_right_parenthesis_no_tokens() {
+        let tokens = vec![
+            Token::FunctionKeyword,
+            Token::Identifier("my_function".to_owned()),
+            Token::LeftParenthesis,
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        assert!(matches!(result, Err(e) if e.len() == 1 && e[0].message == "expected type or )"));
+    }
+
+    /// function my_function() infer
+    #[test]
+    fn function_declaration_missing_left_curley_brace() {
+        let tokens = vec![
+            Token::FunctionKeyword,
+            Token::Identifier("my_function".to_owned()),
+            Token::LeftParenthesis,
+            Token::RightParenthesis,
+            Token::InferKeyword,
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        assert!(matches!(result, Err(e) if e.len() == 1 && e[0].message == "Expected -> or {"));
+    }
+
+    /// function my_function()
+    #[test]
+    fn function_declaration_missing_left_curley_brace_no_tokens() {
+        let tokens = vec![
+            Token::FunctionKeyword,
+            Token::Identifier("my_function".to_owned()),
+            Token::LeftParenthesis,
+            Token::RightParenthesis,
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        assert!(matches!(result, Err(e) if e.len() == 1 && e[0].message == "Expected -> or {"));
+    }
+
+    /// function my_function () { return;
+    /// function
+    #[test]
+    fn function_declaration_missing_right_curley_brace() {
+        let tokens = vec![
+            Token::FunctionKeyword,
+            Token::Identifier("my_function".to_owned()),
+            Token::LeftParenthesis,
+            Token::RightParenthesis,
+            Token::LeftCurleyBrace,
+            Token::ReturnKeyword,
+            Token::SemiColon,
+            Token::FunctionKeyword,
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        assert!(matches!(result, Err(e) if e.len() == 1 && e[0].message == "Expected }"));
+    }
+
+    /// function my_function() -> {
+    #[test]
+    fn function_declaration_missing_return_type() {
+        let tokens = vec![
+            Token::FunctionKeyword,
+            Token::Identifier("my_function".to_owned()),
+            Token::LeftParenthesis,
+            Token::RightParenthesis,
+            Token::FunctionSignitureSplitter,
+            Token::LeftCurleyBrace,
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        assert!(matches!(result, Err(e) if e.len() == 1 && e[0].message == "Expected return type"));
+    }
+
+    /// function my_function() ->
+    #[test]
+    fn function_declaration_missing_return_type_no_tokens() {
+        let tokens = vec![
+            Token::FunctionKeyword,
+            Token::Identifier("my_function".to_owned()),
+            Token::LeftParenthesis,
+            Token::RightParenthesis,
+            Token::FunctionSignitureSplitter,
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        assert!(matches!(result, Err(e) if e.len() == 1 && e[0].message == "Expected return type"));
     }
 }
