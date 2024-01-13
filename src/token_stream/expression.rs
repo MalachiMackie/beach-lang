@@ -626,4 +626,40 @@ mod tests {
 
         assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
     }
+
+    #[test]
+    fn expression_no_tokens() {
+        let tokens = vec![Token::InferKeyword, Token::Identifier("my_var".to_owned()), Token::AssignmentOperator, Token::SemiColon];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        assert!(matches!(result, Err(e) if e.len() == 1 && e[0].message == "expected expression"));
+    }
+
+    #[test]
+    fn expression_plus_without_left() {
+        let tokens = vec![Token::InferKeyword, Token::Identifier("my_var".to_owned()), Token::AssignmentOperator, Token::PlusOperator, Token::SemiColon];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        assert!(matches!(result, Err(e) if e.len() == 1 && e[0].message == "Expected expression"));
+    }
+
+    #[test]
+    fn expression_greater_than_without_left() {
+        let tokens = vec![Token::InferKeyword, Token::Identifier("my_var".to_owned()), Token::AssignmentOperator, Token::RightAngle, Token::SemiColon];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        assert!(matches!(result, Err(e) if e.len() == 1 && e[0].message == "Expected expression"));
+    }
+
+    #[test]
+    fn expression_unexpected_token() {
+        let tokens = vec![Token::InferKeyword, Token::Identifier("my_var".to_owned()), Token::AssignmentOperator, Token::LeftCurleyBrace, Token::SemiColon];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        assert!(matches!(result, Err(e) if e.len() == 1 && e[0].message == "unexpected token LeftCurleyBrace"));
+    }
 }
