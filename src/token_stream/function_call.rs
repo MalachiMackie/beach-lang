@@ -62,3 +62,49 @@ pub(super) fn take_function_call(
         };
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{ast::builders::ast_builder::AstBuilder, token_stream::token::Token};
+
+    #[test]
+    fn function_call_missing_left_parenthesis() {
+        let tokens = vec![Token::Identifier("my_function".to_owned())];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        assert!(
+            matches!(result, Err(e) if e.len() == 1 && e[0].message == "Expected LeftParenthesis")
+        )
+    }
+
+    #[test]
+    fn function_call_missing_right_parenthesis() {
+        let tokens = vec![
+            Token::Identifier("my_function".to_owned()),
+            Token::LeftParenthesis,
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        assert!(
+            matches!(result, Err(e) if e.len() == 1 && e[0].message == "unexpected end of function call")
+        )
+    }
+
+    #[test]
+    fn function_call_missing_comma() {
+        let tokens = vec![
+            Token::Identifier("my_function".to_owned()),
+            Token::LeftParenthesis,
+            Token::TrueKeyword,
+            Token::LeftCurleyBrace,
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        assert!(
+            matches!(dbg!(result), Err(e) if e.len() == 1 && e[0].message == "Require comma separating parameters".to_owned())
+        )
+    }
+}
