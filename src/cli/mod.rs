@@ -1,8 +1,6 @@
 mod help_command;
 mod run_command;
 
-use std::env::Args;
-
 use self::{help_command::HelpCommand, run_command::RunCommand};
 
 pub trait BeachCommand {
