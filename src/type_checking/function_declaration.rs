@@ -41,9 +41,7 @@ impl Function {
             (None, FunctionReturnType::Type(_)) => Err(vec![TypeCheckingError {
                 message: "expected return value, but void was returned".to_owned(),
             }]),
-            (Some(_), FunctionReturnType::Void) => Err(vec![TypeCheckingError {
-                message: "expected void, but return value was found".to_owned(),
-            }]),
+            (Some(_), FunctionReturnType::Void) => unreachable!("return statement type checking should validate that some can't be returned from void function"),
             // expect return type checking to happen at the return site
             (Some(_), FunctionReturnType::Type(_)) => Ok(()),
             (None, FunctionReturnType::Void) => Ok(()),
