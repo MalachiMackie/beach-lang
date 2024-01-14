@@ -2,11 +2,11 @@ use std::fs;
 
 use crate::{ast::builders::ast_builder::AstBuilder, parsing::parse_program};
 
-use super::Command;
+use super::BeachCommand;
 
 pub(super) struct RunCommand;
 
-impl Command for RunCommand {
+impl BeachCommand for RunCommand {
     fn name(&self) -> &'static str {
         "run"
     }

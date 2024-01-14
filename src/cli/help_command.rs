@@ -1,10 +1,10 @@
 use crate::cli::get_commands;
 
-use super::Command;
+use super::BeachCommand;
 
 pub struct HelpCommand;
 
-impl Command for HelpCommand {
+impl BeachCommand for HelpCommand {
     fn name(&self) -> &'static str {
         "help"
     }

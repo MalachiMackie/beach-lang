@@ -5,15 +5,15 @@ use std::env::Args;
 
 use self::{help_command::HelpCommand, run_command::RunCommand};
 
-pub trait Command {
+pub trait BeachCommand {
     fn name(&self) -> &'static str;
     fn usage(&self) -> &'static str;
     fn description(&self) -> &'static str;
     fn run(&self, args: Vec<String>) -> Result<(), String>;
 }
 
-fn get_commands() -> Box<[Box<dyn Command>]> {
-    let commands: Vec<Box<dyn Command>> = vec![Box::new(HelpCommand), Box::new(RunCommand)];
+fn get_commands() -> Box<[Box<dyn BeachCommand>]> {
+    let commands: Vec<Box<dyn BeachCommand>> = vec![Box::new(HelpCommand), Box::new(RunCommand)];
 
     commands.into_boxed_slice()
 }
@@ -22,7 +22,7 @@ pub fn match_command(args: Args) {
     let mut args = args.skip(1);
     let commands = get_commands();
 
-    let help_command = Box::new(HelpCommand) as Box<dyn Command>;
+    let help_command = Box::new(HelpCommand) as Box<dyn BeachCommand>;
 
     let found_command = args
         .next()
