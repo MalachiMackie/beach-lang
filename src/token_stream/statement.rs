@@ -14,26 +14,19 @@ use super::{
 };
 
 pub(super) fn try_create_statement(
+    first_token: Token,
     tokens: &mut VecDeque<Token>,
 ) -> Result<Option<Box<dyn FnOnce(StatementBuilder) -> Node>>, Vec<TokenStreamError>> {
-    let token = tokens.pop_front();
-    let statement_type = match token {
-        None => {
-            return Err(vec![TokenStreamError {
-                message: "Unexpected end of tokens".to_owned(),
-            }]);
-        }
-        Some(Token::Identifier(identifier)) => StatementType::FunctionCall(identifier),
-        Some(Token::TypeKeyword(type_)) => {
+    let statement_type = match first_token {
+        Token::Identifier(identifier) => StatementType::FunctionCall(identifier),
+        Token::TypeKeyword(type_) => {
             StatementType::VariableDeclaration(VariableDeclarationType::Type(type_))
         }
-        Some(Token::InferKeyword) => {
-            StatementType::VariableDeclaration(VariableDeclarationType::Infer)
-        }
-        Some(Token::IfKeyword) => StatementType::If,
-        Some(Token::ReturnKeyword) => StatementType::Return,
-        Some(token) => {
-            tokens.push_front(token);
+        Token::InferKeyword => StatementType::VariableDeclaration(VariableDeclarationType::Infer),
+        Token::IfKeyword => StatementType::If,
+        Token::ReturnKeyword => StatementType::Return,
+        _ => {
+            tokens.push_front(first_token);
             return Ok(None);
         }
     };
@@ -109,7 +102,7 @@ fn take_return_statement(
 ) -> Result<Box<dyn FnOnce(StatementBuilder) -> Node>, Vec<TokenStreamError>> {
     match tokens.pop_front() {
         None => Err(vec![TokenStreamError {
-            message: "Expected ; or expression".to_owned(),
+            message: "expected ;".to_owned(),
         }]),
         Some(Token::SemiColon) => Ok(build_return_statement(None)),
         Some(token) => {
@@ -204,5 +197,59 @@ mod tests {
         });
 
         assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
+    }
+
+    #[test]
+    fn statement_missing_semicolon() {
+        let tokens = vec![Token::InferKeyword];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        assert!(matches!(result, Err(e) if e.len() == 1 && e[0].message == "expected ;"))
+    }
+
+    #[test]
+    fn statement_function_call_expected_semicolon() {
+        let tokens = vec![
+            Token::Identifier("my_function".to_owned()),
+            Token::LeftParenthesis,
+            Token::RightParenthesis,
+            Token::TrueKeyword,
+            Token::SemiColon,
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        assert!(
+            matches!(result, Err(e) if e.len() >= 1 && e[0].message == "Expected SemiColon, found TrueKeyword")
+        )
+    }
+
+    #[test]
+    fn statement_return_expected_semicolon() {
+        let tokens = vec![
+            Token::ReturnKeyword,
+            Token::TrueKeyword,
+            Token::LeftParenthesis,
+            Token::SemiColon,
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        assert!(
+            matches!(dbg!(result), Err(e) if e.len() >= 1 && e[0].message == "Expected SemiColon, found LeftParenthesis")
+        );
+    }
+
+    #[test]
+    fn statement_return_missing_semicolon() {
+        let tokens = vec![Token::ReturnKeyword];
+
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        assert!(
+            matches!(dbg!(result), Err(e) if e.len() >= 1 && e[0].message == "expected ;")
+        );
     }
 }

@@ -57,9 +57,7 @@ impl AstBuilder {
                     }
                 },
                 _ => {
-                    tokens.push_front(next_token);
-
-                    match try_create_statement(&mut tokens) {
+                    match try_create_statement(next_token, &mut tokens) {
                         Err(statement_errors) => {
                             errors.extend(statement_errors);
                         }
@@ -142,9 +140,7 @@ pub(super) fn get_block_statements(
                 }]);
             }
             Some(token) => {
-                tokens.push_front(token);
-
-                match try_create_statement(tokens)? {
+                match try_create_statement(token, tokens)? {
                     None => {
                         // token is not a valid statement start, next token can only be an end curly brace
                         require_end_curly_brace = true;
@@ -473,5 +469,15 @@ mod tests {
             });
 
         assert!(matches!(dbg!(result), Ok(ast_builder) if ast_builder == dbg!(expected)));
+    }
+
+    #[test]
+    fn if_statement_missing_right_curley_brace() {
+        let tokens = vec![Token::IfKeyword, Token::LeftParenthesis, Token::TrueKeyword, Token::RightParenthesis, Token::LeftCurleyBrace];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        assert!(matches!(result, Err(e) if e.len() >= 1 && e[0].message == "expected }"))
+
     }
 }

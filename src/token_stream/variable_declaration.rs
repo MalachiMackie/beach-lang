@@ -15,7 +15,9 @@ pub(super) fn try_create_variable_declaration(
     mut tokens: VecDeque<Token>,
 ) -> Result<impl FnOnce(VariableDeclarationBuilder) -> Node, Vec<TokenStreamError>> {
     let Some(Token::Identifier(name)) = tokens.pop_front() else {
-        return Err(vec![TokenStreamError{message: "expected variable identifier".to_owned()}]);
+        return Err(vec![TokenStreamError {
+            message: "expected variable identifier".to_owned(),
+        }]);
     };
 
     if !matches!(tokens.pop_front(), Some(Token::AssignmentOperator)) {
@@ -172,5 +174,32 @@ mod tests {
         });
 
         assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
+    }
+
+    #[test]
+    fn variable_declaration_missing_name() {
+        let tokens = vec![Token::InferKeyword, Token::SemiColon];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        assert!(
+            matches!(result, Err(e) if e.len() >= 1 && e[0].message == "expected variable identifier")
+        );
+    }
+
+    #[test]
+    fn variable_declaration_missing_assignment_operator() {
+        let tokens = vec![
+            Token::InferKeyword,
+            Token::Identifier("my_variable".to_owned()),
+            Token::TrueKeyword,
+            Token::SemiColon
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        assert!(
+            matches!(dbg!(result), Err(e) if e.len() >= 1 && e[0].message == r#"expected assignment operator "=""#)
+        );
     }
 }
