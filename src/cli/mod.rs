@@ -1,20 +1,19 @@
 mod help_command;
+mod run_command;
 
 use std::env::Args;
 
-use self::help_command::HelpCommand;
+use self::{help_command::HelpCommand, run_command::RunCommand};
 
 pub trait Command {
     fn name(&self) -> &'static str;
     fn usage(&self) -> &'static str;
     fn description(&self) -> &'static str;
-    fn run(&self, args: Vec<String>);
+    fn run(&self, args: Vec<String>) -> Result<(), String>;
 }
 
-
-
 fn get_commands() -> Box<[Box<dyn Command>]> {
-    let commands: Vec<Box<dyn Command>> = vec![Box::new(HelpCommand)];
+    let commands: Vec<Box<dyn Command>> = vec![Box::new(HelpCommand), Box::new(RunCommand)];
 
     commands.into_boxed_slice()
 }
@@ -36,5 +35,7 @@ pub fn match_command(args: Args) {
         })
         .unwrap_or(&help_command);
 
-    found_command.run(args.collect());
+    if let Err(error) = found_command.run(args.collect()) {
+        println!("{error}")
+    }
 }
