@@ -154,6 +154,7 @@ mod tests {
 
         let result = function.type_check(&functions);
 
+
         assert!(matches!(result, Ok(())));
     }
 }
