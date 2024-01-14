@@ -1,13 +1,20 @@
 mod ast;
+mod cli;
 mod evaluation;
 mod parsing;
 mod token_stream;
 mod type_checking;
 
+use std::env::args;
+
 use ast::builders::ast_builder::AstBuilder;
+use cli::match_command;
 use parsing::parse_program;
 
 fn main() {
+    match_command(args());
+    return;
+
     let tokens = match parse_program(FIBONACCI_CODE) {
         Ok(tokens) => tokens,
         Err(errors) => {
