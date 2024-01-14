@@ -32,11 +32,7 @@ pub(super) fn try_create_if_statement(
         match tokens.pop_front() {
             None if found_else => {
                 return Err(vec![TokenStreamError {
-                    message: format!(
-                        "Expected {} or {}",
-                        Token::IfKeyword,
-                        Token::LeftCurleyBrace
-                    ),
+                    message: "expected if or {".to_owned(),
                 }])
             }
             None => {
@@ -47,16 +43,7 @@ pub(super) fn try_create_if_statement(
                     else_if_blocks,
                 ));
             }
-            Some(Token::ElseKeyword) if found_else => {
-                return Err(vec![TokenStreamError {
-                    message: format!(
-                        "Expected {} or {}",
-                        Token::IfKeyword,
-                        Token::LeftCurleyBrace
-                    ),
-                }])
-            }
-            Some(Token::ElseKeyword) => {
+            Some(Token::ElseKeyword) if !found_else => {
                 found_else = true;
             }
             Some(Token::LeftCurleyBrace) if found_else => {
@@ -80,11 +67,7 @@ pub(super) fn try_create_if_statement(
             }
             Some(_) if found_else => {
                 return Err(vec![TokenStreamError {
-                    message: format!(
-                        "Expected {} or {}",
-                        Token::IfKeyword,
-                        Token::LeftCurleyBrace
-                    ),
+                    message: "expected if or {".to_owned(),
                 }])
             }
             Some(token) => {
@@ -491,5 +474,80 @@ mod tests {
         });
 
         assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
+    }
+
+    #[test]
+    fn if_statement_missing_right_parenthesis() {
+        let tokens = vec![
+            Token::IfKeyword,
+            Token::LeftParenthesis,
+            Token::TrueKeyword,
+            Token::LeftCurleyBrace,
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        assert!(
+            matches!(result, Err(e) if e.len() >= 1 && e[0].message == "Expected RightParenthesis, found LeftCurleyBrace")
+        );
+    }
+
+    #[test]
+    fn if_statement_missing_else_curley_brace() {
+        let tokens = vec![
+            Token::IfKeyword,
+            Token::LeftParenthesis,
+            Token::TrueKeyword,
+            Token::RightParenthesis,
+            Token::LeftCurleyBrace,
+            Token::RightCurleyBrace,
+            Token::ElseKeyword,
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        assert!(
+            matches!(dbg!(result), Err(e) if e.len() >= 1 && e[0].message == "expected if or {")
+        );
+    }
+
+    #[test]
+    fn else_if_missing_right_parenthesis() {
+        let tokens = vec![
+            Token::IfKeyword,
+            Token::LeftParenthesis,
+            Token::TrueKeyword,
+            Token::RightParenthesis,
+            Token::LeftCurleyBrace,
+            Token::RightCurleyBrace,
+            Token::ElseKeyword,
+            Token::IfKeyword,
+            Token::LeftParenthesis,
+            Token::TrueKeyword,
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        assert!(
+            matches!(result, Err(e) if e.len() >= 1 && e[0].message == "Expected RightParenthesis")
+        );
+    }
+
+    #[test]
+    fn else_expected_if_or_left_curley_brace() {
+        let tokens = vec![
+            Token::IfKeyword,
+            Token::LeftParenthesis,
+            Token::TrueKeyword,
+            Token::RightParenthesis,
+            Token::LeftCurleyBrace,
+            Token::RightCurleyBrace,
+            Token::ElseKeyword,
+            Token::RightCurleyBrace,
+        ];
+
+        let result = AstBuilder::from_token_stream(tokens);
+
+        assert!(matches!(result, Err(e) if e.len() >= 1 && e[0].message == "expected if or {"))
     }
 }
