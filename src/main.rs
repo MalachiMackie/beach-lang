@@ -9,6 +9,7 @@ use std::{env::args, process::exit};
 
 use cli::match_command;
 
+#[cfg(not(tarpaulin_include))]
 fn main() {
     if let Ok(_) = match_command(args().skip(1).collect()) {
         exit(0);

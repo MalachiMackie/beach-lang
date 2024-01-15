@@ -16,6 +16,8 @@ fn get_commands() -> Box<[Box<dyn BeachCommand>]> {
     commands.into_boxed_slice()
 }
 
+// this function has no real output
+#[cfg(not(tarpaulin_include))]
 pub fn match_command(args: Vec<String>) -> Result<(), ()> {
     let mut args = args.into_iter();
     let commands = get_commands();

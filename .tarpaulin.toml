@@ -1,0 +1,5 @@
+[no-integration-tests]
+run-types = ["Bins"]
+
+[report]
+out = ["Html"]
