@@ -16,22 +16,28 @@ fn get_commands() -> Box<[Box<dyn BeachCommand>]> {
     commands.into_boxed_slice()
 }
 
-pub fn match_command(args: Vec<String>) -> Result<(), String> {
+pub fn match_command(args: Vec<String>) -> Result<(), ()> {
     let mut args = args.into_iter();
     let commands = get_commands();
 
     let help_command = Box::new(HelpCommand) as Box<dyn BeachCommand>;
 
-    let found_command = args
-        .next()
-        .map(|command_name| {
-            commands
-                .into_iter()
-                .filter(|command| command.name().eq_ignore_ascii_case(&command_name))
-                .next()
-                .unwrap_or(&help_command)
-        })
-        .unwrap_or(&help_command);
+    let found_command = args.next().map(|command_name| {
+        commands
+            .into_iter()
+            .filter(|command| command.name().eq_ignore_ascii_case(&command_name))
+            .next()
+    });
 
-    found_command.run(args.collect())
+    let Some(Some(found_command)) = found_command else {
+        _ = help_command.run(args.collect());
+        return Err(());
+    };
+
+    if let Err(error) = found_command.run(args.collect()) {
+        println!("{error}");
+        Err(())
+    } else {
+        Ok(())
+    }
 }

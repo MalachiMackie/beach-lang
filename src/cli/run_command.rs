@@ -107,7 +107,7 @@ mod tests {
 
             let result = command.run(args);
 
-            assert!(matches!(result, Err(e) if e == "usage: beach run [program].bch"));
+            assert!(matches!(result, Err(error) if error == "usage: beach run [program].bch"));
         }
 
         #[test]
@@ -119,7 +119,7 @@ mod tests {
             let result = command.run(args);
 
             assert!(
-                matches!(result, Err(e) if e == "the run command does not take any more sub commands or options\nusage: beach run [program].bch")
+                matches!(result, Err(error) if error == "the run command does not take any more sub commands or options\nusage: beach run [program].bch")
             )
         }
 
@@ -132,7 +132,7 @@ mod tests {
             let result = command.run(args);
 
             assert!(
-                matches!(result, Err(e) if e == "a beach program file must have .bch extension")
+                matches!(result, Err(error) if error == "a beach program file must have .bch extension")
             )
         }
     }
