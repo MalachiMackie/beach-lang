@@ -47,7 +47,7 @@ impl BeachCommand for RunCommand {
 }
 
 fn run(code: &str) -> Result<(), Vec<String>> {
-    let tokens = parse_program(code)?;
+    let tokens = parse_program(code)?.into_iter().map(|(token, _)| token).collect();
 
     let ast = AstBuilder::from_token_stream(tokens)
         .map_err(|errors| {

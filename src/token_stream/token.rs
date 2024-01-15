@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, fmt::Display};
+use std::{collections::VecDeque, fmt::Display, ops::Range};
 
 use crate::ast::{
     builders::{ast_builder::AstBuilder, statement_builder::StatementBuilder},
@@ -38,6 +38,23 @@ impl Display for Token {
     }
 }
 
+#[derive(PartialEq, Debug)]
+pub struct TokenSource {
+    file: String,
+    line: u32,
+    character_range: Range<u32>,
+}
+
+impl TokenSource {
+    pub fn new(file: &str, line: u32, character_range: Range<u32>) -> Self {
+        Self {
+            file: file.to_owned(),
+            line,
+            character_range
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct TokenStreamError {
     pub message: String,
@@ -56,24 +73,20 @@ impl AstBuilder {
                         builder = builder.function_declaration(function_declaration);
                     }
                 },
-                _ => {
-                    match try_create_statement(next_token, &mut tokens) {
-                        Err(statement_errors) => {
-                            errors.extend(statement_errors);
-                        }
-                        Ok(None) => {
-                            errors.push(TokenStreamError {
-                                message: format!(
-                                    "{} is not a valid statement beginning",
-                                    tokens.pop_front().unwrap()
-                                ),
-                            });
-                        }
-                        Ok(Some(statement_builder)) => {
-                            builder = builder.statement(statement_builder)
-                        }
+                _ => match try_create_statement(next_token, &mut tokens) {
+                    Err(statement_errors) => {
+                        errors.extend(statement_errors);
                     }
-                }
+                    Ok(None) => {
+                        errors.push(TokenStreamError {
+                            message: format!(
+                                "{} is not a valid statement beginning",
+                                tokens.pop_front().unwrap()
+                            ),
+                        });
+                    }
+                    Ok(Some(statement_builder)) => builder = builder.statement(statement_builder),
+                },
             };
         }
 
@@ -414,7 +427,10 @@ mod tests {
                                     })
                                     .body(|if_body| {
                                         if_body
-                                            .statement(|statement| statement.return_value(|value| value.variable("next")))
+                                            .statement(|statement| {
+                                                statement
+                                                    .return_value(|value| value.variable("next"))
+                                            })
                                             .build()
                                     })
                                     .build()
@@ -473,11 +489,16 @@ mod tests {
 
     #[test]
     fn if_statement_missing_right_curley_brace() {
-        let tokens = vec![Token::IfKeyword, Token::LeftParenthesis, Token::TrueKeyword, Token::RightParenthesis, Token::LeftCurleyBrace];
+        let tokens = vec![
+            Token::IfKeyword,
+            Token::LeftParenthesis,
+            Token::TrueKeyword,
+            Token::RightParenthesis,
+            Token::LeftCurleyBrace,
+        ];
 
         let result = AstBuilder::from_token_stream(tokens);
 
         assert!(matches!(result, Err(e) if e.len() >= 1 && e[0].message == "expected }"))
-
     }
 }
