@@ -1,4 +1,4 @@
-use std::fs;
+use std::{fs, ops::Range};
 
 use crate::{ast::builders::ast_builder::AstBuilder, parsing::parse_program};
 
@@ -42,18 +42,74 @@ impl BeachCommand for RunCommand {
             Ok(code) => code,
         };
 
-        run(&code).map_err(|err| format!("Failed to run beach program: {}", err.join("\n")))
+        run(&code).map_err(|err| {
+            format!(
+                "Failed to run beach program: {}",
+                err.into_iter()
+                    .map(|e| e.to_string())
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            )
+        })
     }
 }
 
-fn run(code: &str) -> Result<(), Vec<String>> {
-    let tokens = parse_program(code)?.into_iter().map(|(token, _)| token).collect();
+#[derive(PartialEq, Debug)]
+struct Position {
+    line: u32,
+    character: u32,
+}
+
+#[derive(PartialEq, Debug)]
+struct BeachError {
+    error: String,
+    file: String,
+    range: Range<Position>,
+}
+
+impl ToString for BeachError {
+    fn to_string(&self) -> String {
+        // todo: actual format
+        format!("{:?}", self)
+    }
+}
+
+fn run(code: &str) -> Result<(), Vec<BeachError>> {
+    let tokens = parse_program(code)
+        .map_err(|err| {
+            err.into_iter()
+                .map(|e| BeachError {
+                    range: Position {
+                        line: e.line,
+                        character: e.character_range.start,
+                    }..Position {
+                        line: e.line,
+                        character: e.character_range.end,
+                    },
+                    error: format!("Parsing error: {}", e.error),
+                    file: e.file,
+                })
+                .collect::<Vec<_>>()
+        })?
+        .into_iter()
+        .map(|(token, _)| token)
+        .collect();
 
     let ast = AstBuilder::from_token_stream(tokens)
         .map_err(|errors| {
             errors
                 .into_iter()
-                .map(|err| err.message)
+                .map(|err| BeachError {
+                    error: err.message,
+                    file: "".to_owned(),
+                    range: Position {
+                        line: 1,
+                        character: 1,
+                    }..Position {
+                        line: 1,
+                        character: 1,
+                    },
+                })
                 .collect::<Vec<_>>()
         })?
         .build();
@@ -61,7 +117,17 @@ fn run(code: &str) -> Result<(), Vec<String>> {
     ast.type_check().map_err(|errors| {
         errors
             .into_iter()
-            .map(|err| err.message)
+            .map(|err| BeachError {
+                error: err.message,
+                file: "".to_owned(),
+                range: Position {
+                    line: 1,
+                    character: 1,
+                }..Position {
+                    line: 1,
+                    character: 1,
+                },
+            })
             .collect::<Vec<_>>()
     })?;
 
@@ -138,7 +204,7 @@ mod tests {
     }
 
     mod run_function {
-        use crate::cli::run_command::run;
+        use crate::cli::run_command::{run, BeachError, Position};
 
         #[test]
         fn parsing_error() {
@@ -146,7 +212,18 @@ mod tests {
 
             let result = run(code);
 
-            assert!(matches!(result, Err(e) if e.len() == 1 && e[0] == "Unexpected character `~`"))
+            assert!(
+                matches!(result, Err(e) if e.len() == 1 && e[0] == BeachError{
+                    error:"Parsing error: Unexpected character `~`".to_owned(),
+                     file: "my_file".to_owned(),
+                      range: Position {
+                        line: 1,
+                        character: 1,
+                    }..Position {
+                        line: 1,
+                        character: 1,
+                    },})
+            )
         }
 
         #[test]
@@ -155,7 +232,15 @@ mod tests {
 
             let result = run(code);
 
-            assert!(matches!(result, Err(e) if e.len() == 1 && e[0] == "expected ;"))
+            assert!(
+                matches!(result, Err(e) if e.len() == 1 && e[0] == BeachError{error:"expected ;".to_owned(), file: "".to_owned(), range: Position {
+                        line: 1,
+                        character: 1,
+                    }..Position {
+                        line: 1,
+                        character: 1,
+                    },} )
+            )
         }
 
         #[test]
@@ -165,7 +250,13 @@ mod tests {
             let result = run(code);
 
             assert!(
-                matches!(result, Err(e) if e.len() == 1 && e[0] == "Expected type to be Boolean, but found UInt")
+                matches!(result, Err(e) if e.len() == 1 && e[0] == BeachError {error:"Expected type to be Boolean, but found UInt".to_owned(), file: "".to_owned(), range: Position {
+                        line: 1,
+                        character: 1,
+                    }..Position {
+                        line: 1,
+                        character: 1,
+                    },})
             )
         }
 

@@ -1,60 +1,84 @@
-use std::str::FromStr;
+use std::ops::Range;
 
 use crate::{
     ast::node::Type,
     token_stream::token::{Token, TokenSource},
 };
 
+#[derive(PartialEq, Debug)]
+pub struct ParseError {
+    pub error: String,
+    pub file: String,
+    pub line: u32,
+    pub character_range: Range<u32>,
+}
+
+#[derive(Default)]
+struct Buffer {
+    character_start: Option<u32>,
+    line: u32,
+    value: String,
+}
+
 fn push_current_buffer(
     tokens: &mut Vec<(Token, TokenSource)>,
-    buffer: &mut (Option<u32>, u32, String),
-) -> Result<(), Vec<String>> {
-    let len = buffer.2.len() as u32;
-    match buffer.2.parse() {
-        Ok(token) => {
-            let character_start = if let Some(character_start) = buffer.0 {
-                character_start
-            } else {
-                0
-            };
+    buffer: &mut Buffer,
+) -> Result<(), Vec<ParseError>> {
+    let len = buffer.value.len() as u32;
+    let character_start = buffer.character_start.unwrap_or(0);
+    if len > 0 {
+        match Token::from_str(
+            &buffer.value,
+            "my_file",
+            buffer.line,
+            character_start..(character_start + len - 1),
+        ) {
+            Ok(Some(token)) => {
+                let character_start = if let Some(character_start) = buffer.character_start {
+                    character_start
+                } else {
+                    0
+                };
 
-            tokens.push((
-                token,
-                TokenSource::new(
-                    "my_file",
-                    buffer.1,
-                    character_start..(character_start + len - 1),
-                ),
-            ))
+                tokens.push((
+                    token,
+                    TokenSource::new(
+                        "my_file",
+                        buffer.line,
+                        character_start..(character_start + len - 1),
+                    ),
+                ))
+            }
+            Ok(None) => {}
+            Err(error) => return Err(vec![error]),
         }
-        Err(Some(error)) => return Err(vec![error]),
-        Err(None) => {}
     }
-    *buffer = (None, buffer.1, String::new());
+    *buffer = Buffer {
+        character_start: None,
+        line: buffer.line,
+        value: String::new(),
+    };
     Ok(())
 }
 
-pub fn parse_program(code: &str) -> Result<Vec<(Token, TokenSource)>, Vec<String>> {
-    let mut tokens = Vec::new();
-    let mut buffer = (None, 0, String::new());
-
-    fn new_buffer(
-        buffer: (Option<u32>, u32, String),
-        char: char,
-        column: u32,
-        line: u32,
-    ) -> (Option<u32>, u32, String) {
-        let (current_column, current_line, mut buffer_str) = buffer;
-        let (new_column, new_line) = if current_column.is_some() {
-            (current_column, current_line)
+impl Buffer {
+    fn update(&mut self, char: char, column: u32, line: u32) {
+        let (new_column, new_line) = if let Some(character_start) = self.character_start {
+            (character_start, self.line)
         } else {
-            (Some(column), line)
+            (column, line)
         };
 
-        buffer_str.push(char);
+        self.character_start = Some(new_column);
+        self.line = new_line;
 
-        (new_column, new_line, buffer_str)
+        self.value.push(char);
     }
+}
+
+pub fn parse_program(code: &str) -> Result<Vec<(Token, TokenSource)>, Vec<ParseError>> {
+    let mut tokens = Vec::new();
+    let mut buffer = Buffer::default();
 
     for (line_index, line) in code.lines().enumerate() {
         let line_index = (line_index + 1) as u32;
@@ -63,16 +87,16 @@ pub fn parse_program(code: &str) -> Result<Vec<(Token, TokenSource)>, Vec<String
             match char {
                 '=' => {
                     push_current_buffer(&mut tokens, &mut buffer)?;
-                    buffer = new_buffer(buffer, '=', column, line_index);
+                    buffer.update('=', column, line_index);
                     push_current_buffer(&mut tokens, &mut buffer)?;
                 }
                 '>' => {
-                    if buffer.2 == "-" {
-                        buffer = new_buffer(buffer, '>', column, line_index);
+                    if buffer.value == "-" {
+                        buffer.update('>', column, line_index);
                         push_current_buffer(&mut tokens, &mut buffer)?;
                     } else {
                         push_current_buffer(&mut tokens, &mut buffer)?;
-                        buffer = new_buffer(buffer, '>', column, line_index);
+                        buffer.update('>', column, line_index);
                     }
                 }
                 _ if char.is_whitespace() => {
@@ -80,16 +104,16 @@ pub fn parse_program(code: &str) -> Result<Vec<(Token, TokenSource)>, Vec<String
                 }
                 _ if char.is_ascii_punctuation() && char != '_' => {
                     push_current_buffer(&mut tokens, &mut buffer)?;
-                    buffer = new_buffer(buffer, char, column, line_index);
+                    buffer.update(char, column, line_index);
                 }
                 _ => {
-                    if buffer.2.len() == 1 {
-                        let char = buffer.2.chars().next().unwrap();
+                    if buffer.value.len() == 1 {
+                        let char = buffer.value.chars().next().unwrap();
                         if char.is_ascii_punctuation() && char != '_' {
                             push_current_buffer(&mut tokens, &mut buffer)?;
                         }
                     }
-                    buffer = new_buffer(buffer, char, column, line_index);
+                    buffer.update(char, column, line_index);
                 }
             }
         }
@@ -100,41 +124,49 @@ pub fn parse_program(code: &str) -> Result<Vec<(Token, TokenSource)>, Vec<String
     Ok(tokens)
 }
 
-impl FromStr for Token {
-    type Err = Option<String>;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+impl Token {
+    fn from_str(
+        s: &str,
+        file: &str,
+        line: u32,
+        character_range: Range<u32>,
+    ) -> Result<Option<Self>, ParseError> {
         let trimmed = s.trim();
         match trimmed {
-            "" => Err(None),
-            "uint" => Ok(Token::TypeKeyword(Type::UInt)),
-            "boolean" => Ok(Token::TypeKeyword(Type::Boolean)),
-            "true" => Ok(Token::TrueKeyword),
-            "false" => Ok(Token::FalseKeyword),
-            "function" => Ok(Token::FunctionKeyword),
-            "infer" => Ok(Token::InferKeyword),
-            "if" => Ok(Token::IfKeyword),
-            "else" => Ok(Token::ElseKeyword),
-            "return" => Ok(Token::ReturnKeyword),
-            "=" => Ok(Token::AssignmentOperator),
-            "(" => Ok(Token::LeftParenthesis),
-            ")" => Ok(Token::RightParenthesis),
-            "{" => Ok(Token::LeftCurleyBrace),
-            "}" => Ok(Token::RightCurleyBrace),
-            ">" => Ok(Token::RightAngle),
-            "!" => Ok(Token::NotOperator),
-            "+" => Ok(Token::PlusOperator),
-            ";" => Ok(Token::SemiColon),
-            "," => Ok(Token::Comma),
-            "->" => Ok(Token::FunctionSignitureSplitter),
+            "" => Ok(None),
+            "uint" => Ok(Some(Token::TypeKeyword(Type::UInt))),
+            "boolean" => Ok(Some(Token::TypeKeyword(Type::Boolean))),
+            "true" => Ok(Some(Token::TrueKeyword)),
+            "false" => Ok(Some(Token::FalseKeyword)),
+            "function" => Ok(Some(Token::FunctionKeyword)),
+            "infer" => Ok(Some(Token::InferKeyword)),
+            "if" => Ok(Some(Token::IfKeyword)),
+            "else" => Ok(Some(Token::ElseKeyword)),
+            "return" => Ok(Some(Token::ReturnKeyword)),
+            "=" => Ok(Some(Token::AssignmentOperator)),
+            "(" => Ok(Some(Token::LeftParenthesis)),
+            ")" => Ok(Some(Token::RightParenthesis)),
+            "{" => Ok(Some(Token::LeftCurleyBrace)),
+            "}" => Ok(Some(Token::RightCurleyBrace)),
+            ">" => Ok(Some(Token::RightAngle)),
+            "!" => Ok(Some(Token::NotOperator)),
+            "+" => Ok(Some(Token::PlusOperator)),
+            ";" => Ok(Some(Token::SemiColon)),
+            "," => Ok(Some(Token::Comma)),
+            "->" => Ok(Some(Token::FunctionSignitureSplitter)),
             _ if s.len() == 1 && s.chars().next().unwrap().is_ascii_punctuation() && s != "_" => {
-                Err(Some(format!("Unexpected character `{s}`")))
+                Err(ParseError {
+                    error: format!("Unexpected character `{s}`"),
+                    file: file.to_owned(),
+                    character_range,
+                    line,
+                })
             }
             _ => {
                 if let Ok(u32_value) = s.parse::<u32>() {
-                    Ok(Token::UIntValue(u32_value))
+                    Ok(Some(Token::UIntValue(u32_value)))
                 } else {
-                    Ok(Token::Identifier(trimmed.to_owned()))
+                    Ok(Some(Token::Identifier(trimmed.to_owned())))
                 }
             }
         }
@@ -145,6 +177,7 @@ impl FromStr for Token {
 mod tests {
     use crate::{
         ast::node::Type,
+        parsing::ParseError,
         token_stream::token::{Token, TokenSource},
     };
 
@@ -482,9 +515,11 @@ return my_var;
 
     #[test]
     fn parse_invalid_symbol() {
-        let code = "#";
+        let code = "   #";
 
         let result = parse_program(code);
-        assert!(matches!(result, Err(_)));
+        assert!(
+            matches!(result, Err(err) if err == vec![ParseError{file: FILENAME.to_owned(), error: "Unexpected character `#`".to_owned(), line: 1, character_range: 4..4}])
+        );
     }
 }
