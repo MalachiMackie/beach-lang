@@ -21,7 +21,7 @@ struct Buffer {
 }
 
 fn push_current_buffer(
-    tokens: &mut Vec<(Token, TokenSource)>,
+    tokens: &mut Vec<TokenSource>,
     buffer: &mut Buffer,
 ) -> Result<(), Vec<ParseError>> {
     let len = buffer.value.len() as u32;
@@ -40,14 +40,14 @@ fn push_current_buffer(
                     0
                 };
 
-                tokens.push((
-                    token,
+                tokens.push(
                     TokenSource::new(
+                        token,
                         "my_file",
                         buffer.line,
                         character_start..(character_start + len - 1),
                     ),
-                ))
+                )
             }
             Ok(None) => {}
             Err(error) => return Err(vec![error]),
@@ -76,7 +76,7 @@ impl Buffer {
     }
 }
 
-pub fn parse_program(code: &str) -> Result<Vec<(Token, TokenSource)>, Vec<ParseError>> {
+pub fn parse_program(code: &str) -> Result<Vec<TokenSource>, Vec<ParseError>> {
     let mut tokens = Vec::new();
     let mut buffer = Buffer::default();
 
@@ -185,7 +185,12 @@ mod tests {
 
     const FILENAME: &str = "my_file";
 
-    fn get_range(prev_character: &mut Option<u32>, word: &str, space: bool) -> TokenSource {
+    fn get_range(
+        token: Token,
+        prev_character: &mut Option<u32>,
+        word: &str,
+        space: bool,
+    ) -> TokenSource {
         let start_char = if let Some(prev_character) = prev_character {
             *prev_character + if space { 2 } else { 1 }
         } else {
@@ -195,10 +200,11 @@ mod tests {
         let end_char = start_char + (word.len() as u32) - 1;
         *prev_character = Some(end_char);
 
-        TokenSource::new(FILENAME, 1, start_char..(end_char))
+        TokenSource::new(token, FILENAME, 1, start_char..(end_char))
     }
 
     fn get_range_with_line(
+        token: Token,
         prev_character: &mut Option<u32>,
         prev_line: &mut Option<u32>,
         word: &str,
@@ -227,7 +233,7 @@ mod tests {
         let end_char = start_char + (word.len() as u32) - 1;
         *prev_character = Some(end_char);
 
-        TokenSource::new(FILENAME, end_line, start_char..end_char)
+        TokenSource::new(token, FILENAME, end_line, start_char..end_char)
     }
 
     #[test]
@@ -240,39 +246,30 @@ mod tests {
         assert_eq!(
             result,
             Ok(vec![
-                (
+                get_range(
                     Token::TypeKeyword(Type::UInt),
-                    get_range(&mut prev_character, "uint", true)
+                    &mut prev_character,
+                    "uint",
+                    true
                 ),
-                (
+                get_range(
                     Token::TypeKeyword(Type::Boolean),
-                    get_range(&mut prev_character, "boolean", true)
+                    &mut prev_character,
+                    "boolean",
+                    true
                 ),
-                (
-                    Token::TrueKeyword,
-                    get_range(&mut prev_character, "true", true)
-                ),
-                (
-                    Token::FalseKeyword,
-                    get_range(&mut prev_character, "false", true)
-                ),
-                (
+                get_range(Token::TrueKeyword, &mut prev_character, "true", true),
+                get_range(Token::FalseKeyword, &mut prev_character, "false", true),
+                get_range(
                     Token::FunctionKeyword,
-                    get_range(&mut prev_character, "function", true)
+                    &mut prev_character,
+                    "function",
+                    true
                 ),
-                (
-                    Token::InferKeyword,
-                    get_range(&mut prev_character, "infer", true)
-                ),
-                (Token::IfKeyword, get_range(&mut prev_character, "if", true)),
-                (
-                    Token::ElseKeyword,
-                    get_range(&mut prev_character, "else", true)
-                ),
-                (
-                    Token::ReturnKeyword,
-                    get_range(&mut prev_character, "return", true)
-                )
+                get_range(Token::InferKeyword, &mut prev_character, "infer", true),
+                get_range(Token::IfKeyword, &mut prev_character, "if", true),
+                get_range(Token::ElseKeyword, &mut prev_character, "else", true),
+                get_range(Token::ReturnKeyword, &mut prev_character, "return", true),
             ])
         );
     }
@@ -287,40 +284,16 @@ mod tests {
         assert_eq!(
             result,
             Ok(vec![
-                (
-                    Token::LeftParenthesis,
-                    get_range(&mut prev_character, "(", false)
-                ),
-                (
-                    Token::RightParenthesis,
-                    get_range(&mut prev_character, ")", false)
-                ),
-                (
-                    Token::LeftCurleyBrace,
-                    get_range(&mut prev_character, "{", false)
-                ),
-                (
-                    Token::RightCurleyBrace,
-                    get_range(&mut prev_character, "}", false)
-                ),
-                (
-                    Token::PlusOperator,
-                    get_range(&mut prev_character, "+", false)
-                ),
-                (
-                    Token::RightAngle,
-                    get_range(&mut prev_character, ">", false)
-                ),
-                (
-                    Token::NotOperator,
-                    get_range(&mut prev_character, "!", false)
-                ),
-                (
-                    Token::AssignmentOperator,
-                    get_range(&mut prev_character, "=", false)
-                ),
-                (Token::SemiColon, get_range(&mut prev_character, ";", false)),
-                (Token::Comma, get_range(&mut prev_character, ",", false)),
+                get_range(Token::LeftParenthesis, &mut prev_character, "(", false),
+                get_range(Token::RightParenthesis, &mut prev_character, ")", false),
+                get_range(Token::LeftCurleyBrace, &mut prev_character, "{", false),
+                get_range(Token::RightCurleyBrace, &mut prev_character, "}", false),
+                get_range(Token::PlusOperator, &mut prev_character, "+", false),
+                get_range(Token::RightAngle, &mut prev_character, ">", false),
+                get_range(Token::NotOperator, &mut prev_character, "!", false),
+                get_range(Token::AssignmentOperator, &mut prev_character, "=", false),
+                get_range(Token::SemiColon, &mut prev_character, ";", false),
+                get_range(Token::Comma, &mut prev_character, ",", false),
             ])
         );
     }
@@ -335,13 +308,17 @@ mod tests {
         assert_eq!(
             result,
             Ok(vec![
-                (
+                get_range(
                     Token::TypeKeyword(Type::UInt),
-                    get_range(&mut prev_character, "uint", false)
+                    &mut prev_character,
+                    "uint",
+                    false
                 ),
-                (
+                get_range(
                     Token::Identifier("myIdentifier0".to_owned()),
-                    get_range(&mut prev_character, "myIdentifier0", true)
+                    &mut prev_character,
+                    "myIdentifier0",
+                    true
                 )
             ])
         );
@@ -357,14 +334,18 @@ mod tests {
         assert_eq!(
             result,
             Ok(vec![
-                (
+                get_range(
                     Token::Identifier("hello".to_owned()),
-                    get_range(&mut prev_character, "hello", false)
+                    &mut prev_character,
+                    "hello",
+                    false
                 ),
-                (
+                get_range(
                     Token::FunctionSignitureSplitter,
-                    get_range(&mut prev_character, "->", true)
-                )
+                    &mut prev_character,
+                    "->",
+                    true
+                ),
             ])
         );
     }
@@ -385,131 +366,63 @@ return my_var;
         assert_eq!(
             result,
             Ok(vec![
-                (
-                    Token::FunctionKeyword,
-                    get_range_with_line(&mut prev_character, &mut prev_line, "function", 0, false)
-                ),
-                (
-                    Token::Identifier("my_function".to_owned()),
-                    get_range_with_line(
-                        &mut prev_character,
-                        &mut prev_line,
-                        "my_function",
-                        0,
-                        true
-                    )
-                ),
-                (
-                    Token::LeftParenthesis,
-                    get_range_with_line(&mut prev_character, &mut prev_line, "(", 0, false)
-                ),
-                (
-                    Token::TypeKeyword(Type::UInt),
-                    get_range_with_line(&mut prev_character, &mut prev_line, "uint", 0, false)
-                ),
-                (
-                    Token::Identifier("param_1".to_owned()),
-                    get_range_with_line(&mut prev_character, &mut prev_line, "param_1", 0, true)
-                ),
-                (
-                    Token::Comma,
-                    get_range_with_line(&mut prev_character, &mut prev_line, ",", 0, false)
-                ),
-                (
-                    Token::TypeKeyword(Type::Boolean),
-                    get_range_with_line(&mut prev_character, &mut prev_line, "boolean", 0, true)
-                ),
-                (
-                    Token::Identifier("param_2".to_owned()),
-                    get_range_with_line(&mut prev_character, &mut prev_line, "param_2", 0, true)
-                ),
-                (
-                    Token::RightParenthesis,
-                    get_range_with_line(&mut prev_character, &mut prev_line, ")", 0, false)
-                ),
-                (
-                    Token::FunctionSignitureSplitter,
-                    get_range_with_line(&mut prev_character, &mut prev_line, "->", 0, true)
-                ),
-                (
-                    Token::TypeKeyword(Type::UInt),
-                    get_range_with_line(&mut prev_character, &mut prev_line, "uint", 0, true)
-                ),
-                (
-                    Token::LeftCurleyBrace,
-                    get_range_with_line(&mut prev_character, &mut prev_line, "{", 1, false)
-                ),
-                (
-                    Token::InferKeyword,
-                    get_range_with_line(&mut prev_character, &mut prev_line, "infer", 1, false)
-                ),
-                (
-                    Token::Identifier("my_var".to_owned()),
-                    get_range_with_line(&mut prev_character, &mut prev_line, "my_var", 0, true)
-                ),
-                (
-                    Token::AssignmentOperator,
-                    get_range_with_line(&mut prev_character, &mut prev_line, "=", 0, true)
-                ),
-                (
-                    Token::Identifier("other_function".to_owned()),
-                    get_range_with_line(
-                        &mut prev_character,
-                        &mut prev_line,
-                        "other_function",
-                        0,
-                        true
-                    )
-                ),
-                (
-                    Token::LeftParenthesis,
-                    get_range_with_line(&mut prev_character, &mut prev_line, "(", 0, false)
-                ),
-                (
-                    Token::UIntValue(15),
-                    get_range_with_line(&mut prev_character, &mut prev_line, "15", 0, false)
-                ),
-                (
-                    Token::Comma,
-                    get_range_with_line(&mut prev_character, &mut prev_line, ",", 0, false)
-                ),
-                (
-                    Token::TrueKeyword,
-                    get_range_with_line(&mut prev_character, &mut prev_line, "true", 0, true)
-                ),
-                (
-                    Token::Comma,
-                    get_range_with_line(&mut prev_character, &mut prev_line, ",", 0, false)
-                ),
-                (
-                    Token::FalseKeyword,
-                    get_range_with_line(&mut prev_character, &mut prev_line, "false", 0, true)
-                ),
-                (
-                    Token::RightParenthesis,
-                    get_range_with_line(&mut prev_character, &mut prev_line, ")", 0, false)
-                ),
-                (
-                    Token::SemiColon,
-                    get_range_with_line(&mut prev_character, &mut prev_line, ";", 0, false)
-                ),
-                (
-                    Token::ReturnKeyword,
-                    get_range_with_line(&mut prev_character, &mut prev_line, "return", 1, false)
-                ),
-                (
-                    Token::Identifier("my_var".to_owned()),
-                    get_range_with_line(&mut prev_character, &mut prev_line, "my_var", 0, true)
-                ),
-                (
-                    Token::SemiColon,
-                    get_range_with_line(&mut prev_character, &mut prev_line, ";", 0, false)
-                ),
-                (
-                    Token::RightCurleyBrace,
-                    get_range_with_line(&mut prev_character, &mut prev_line, "}", 1, false)
-                )
-            ])
+                            get_range_with_line(
+                                Token::FunctionKeyword,
+                                &mut prev_character,
+                                &mut prev_line,
+                                "function",
+                                0,
+                                false
+                            ),
+                                get_range_with_line(
+            Token::Identifier("my_function".to_owned()),
+                                    &mut prev_character,
+                                    &mut prev_line,
+                                    "my_function",
+                                    0,
+                                    true
+                                ),
+                            get_range_with_line(
+                                Token::LeftParenthesis,
+                                &mut prev_character,
+                                &mut prev_line,
+                                "(",
+                                0,
+                                false
+                            ),
+                                get_range_with_line(Token::TypeKeyword(Type::UInt), &mut prev_character, &mut prev_line, "uint", 0, false),
+                                get_range_with_line(Token::Identifier("param_1".to_owned()), &mut prev_character, &mut prev_line, "param_1", 0, true),
+                                get_range_with_line(Token::Comma, &mut prev_character, &mut prev_line, ",", 0, false),
+                                get_range_with_line(Token::TypeKeyword(Type::Boolean), &mut prev_character, &mut prev_line, "boolean", 0, true),
+                                get_range_with_line(Token::Identifier("param_2".to_owned()), &mut prev_character, &mut prev_line, "param_2", 0, true),
+                                get_range_with_line(Token::RightParenthesis, &mut prev_character, &mut prev_line, ")", 0, false),
+                                get_range_with_line(Token::FunctionSignitureSplitter, &mut prev_character, &mut prev_line, "->", 0, true),
+                                get_range_with_line(Token::TypeKeyword(Type::UInt), &mut prev_character, &mut prev_line, "uint", 0, true),
+                                get_range_with_line(Token::LeftCurleyBrace, &mut prev_character, &mut prev_line, "{", 1, false),
+                                get_range_with_line(Token::InferKeyword, &mut prev_character, &mut prev_line, "infer", 1, false),
+                                get_range_with_line(Token::Identifier("my_var".to_owned()), &mut prev_character, &mut prev_line, "my_var", 0, true),
+                                get_range_with_line(Token::AssignmentOperator, &mut prev_character, &mut prev_line, "=", 0, true),
+                                get_range_with_line(
+            Token::Identifier("other_function".to_owned()),
+                                    &mut prev_character,
+                                    &mut prev_line,
+                                    "other_function",
+                                    0,
+                                    true
+                            ),
+                                get_range_with_line(Token::LeftParenthesis, &mut prev_character, &mut prev_line, "(", 0, false),
+                                get_range_with_line(Token::UIntValue(15), &mut prev_character, &mut prev_line, "15", 0, false),
+                                get_range_with_line(Token::Comma, &mut prev_character, &mut prev_line, ",", 0, false),
+                                get_range_with_line(Token::TrueKeyword, &mut prev_character, &mut prev_line, "true", 0, true),
+                                get_range_with_line(Token::Comma, &mut prev_character, &mut prev_line, ",", 0, false),
+                                get_range_with_line(Token::FalseKeyword, &mut prev_character, &mut prev_line, "false", 0, true),
+                                get_range_with_line(Token::RightParenthesis, &mut prev_character, &mut prev_line, ")", 0, false),
+                                get_range_with_line(Token::SemiColon, &mut prev_character, &mut prev_line, ";", 0, false),
+                                get_range_with_line(Token::ReturnKeyword, &mut prev_character, &mut prev_line, "return", 1, false),
+                                get_range_with_line(Token::Identifier("my_var".to_owned()), &mut prev_character, &mut prev_line, "my_var", 0, true),
+                                get_range_with_line(Token::SemiColon, &mut prev_character, &mut prev_line, ";", 0, false),
+                                get_range_with_line(Token::RightCurleyBrace, &mut prev_character, &mut prev_line, "}", 1, false),
+                        ])
         );
     }
 

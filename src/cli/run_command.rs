@@ -92,7 +92,7 @@ fn run(code: &str) -> Result<(), Vec<BeachError>> {
                 .collect::<Vec<_>>()
         })?
         .into_iter()
-        .map(|(token, _)| token)
+        .map(|source| source.token().clone())
         .collect();
 
     let ast = AstBuilder::from_token_stream(tokens)

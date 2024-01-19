@@ -40,18 +40,24 @@ impl Display for Token {
 
 #[derive(PartialEq, Debug)]
 pub struct TokenSource {
+    token: Token,
     file: String,
     line: u32,
     character_range: Range<u32>,
 }
 
 impl TokenSource {
-    pub fn new(file: &str, line: u32, character_range: Range<u32>) -> Self {
+    pub fn new(token: Token, file: &str, line: u32, character_range: Range<u32>) -> Self {
         Self {
+            token,
             file: file.to_owned(),
             line,
             character_range
         }
+    }
+
+    pub fn token(&self) -> &Token {
+        &self.token
     }
 }
 
