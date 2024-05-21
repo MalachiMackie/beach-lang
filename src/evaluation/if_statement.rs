@@ -15,7 +15,10 @@ impl IfStatement {
             .check_expression
             .evaluate(functions, local_variables, call_stack);
         let Value::Boolean(BoolValue(bool_value)) = check_value else {
-            panic!("Expected if statement check value to be boolean, but found {:?}", check_value)
+            panic!(
+                "Expected if statement check value to be boolean, but found {:?}",
+                check_value
+            )
         };
 
         if bool_value {
@@ -27,7 +30,10 @@ impl IfStatement {
                 .check
                 .evaluate(functions, local_variables, call_stack);
             let Value::Boolean(BoolValue(bool_value)) = check_value else {
-                panic!("Expected if statement check value to be boolean, but found {:?}", check_value)
+                panic!(
+                    "Expected if statement check value to be boolean, but found {:?}",
+                    check_value
+                )
             };
 
             if bool_value {
@@ -41,7 +47,7 @@ impl IfStatement {
         }
 
         if let Some(else_block) = &self.else_block {
-            return evaluate_nodes(&else_block, local_variables, call_stack, functions);
+            return evaluate_nodes(&else_block.nodes, local_variables, call_stack, functions);
         }
 
         NodeResult::None
@@ -53,19 +59,26 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::{
-        ast::node::{ElseIfBlock, IfStatement, Node},
+        ast::node::{ElseBlock, ElseIfBlock, IfStatement, Node},
         evaluation::NodeResult,
+        token_stream::token::TokenSource,
     };
 
     #[test]
     fn test_if_statement_true() {
         let if_statement = IfStatement {
-            check_expression: true.into(),
+            check_expression: (true, TokenSource::dummy_true()).into(),
             if_block: vec![Node::FunctionReturn {
-                return_value: Some(1.into()),
+                return_value: Some((1, TokenSource::dummy_uint(1)).into()),
             }],
             else_if_blocks: Vec::new(),
             else_block: None,
+            if_token: TokenSource::dummy_if(),
+            left_curley_brace_token: TokenSource::dummy_right_curley_brace(),
+            left_parenthesis_token: TokenSource::dummy_left_parenthesis(),
+
+            right_curley_brace_token: TokenSource::dummy_right_curley_brace(),
+            right_parenthesis_token: TokenSource::dummy_right_parenthesis(),
         };
 
         let result = if_statement.evaluate(&HashMap::new(), &HashMap::new(), &mut Vec::new());
@@ -81,12 +94,18 @@ mod tests {
     #[test]
     fn test_if_statement_false_no_else() {
         let if_statement = IfStatement {
-            check_expression: false.into(),
+            check_expression: (false, TokenSource::dummy_false()).into(),
             if_block: vec![Node::FunctionReturn {
-                return_value: Some(1.into()),
+                return_value: Some((1, TokenSource::dummy_uint(1)).into()),
             }],
             else_if_blocks: Vec::new(),
             else_block: None,
+            if_token: TokenSource::dummy_if(),
+            left_curley_brace_token: TokenSource::dummy_right_curley_brace(),
+            left_parenthesis_token: TokenSource::dummy_left_parenthesis(),
+
+            right_curley_brace_token: TokenSource::dummy_right_curley_brace(),
+            right_parenthesis_token: TokenSource::dummy_right_parenthesis(),
         };
 
         let result = if_statement.evaluate(&HashMap::new(), &HashMap::new(), &mut Vec::new());
@@ -97,14 +116,25 @@ mod tests {
     #[test]
     fn test_if_statement_else() {
         let if_statement = IfStatement {
-            check_expression: false.into(),
+            check_expression: (false, TokenSource::dummy_false()).into(),
             if_block: vec![Node::FunctionReturn {
-                return_value: Some(1.into()),
+                return_value: Some((1, TokenSource::dummy_uint(1)).into()),
             }],
             else_if_blocks: Vec::new(),
-            else_block: Some(vec![Node::FunctionReturn {
-                return_value: Some(2.into()),
-            }]),
+            else_block: Some(ElseBlock {
+                nodes: vec![Node::FunctionReturn {
+                    return_value: Some((2, TokenSource::dummy_uint(2)).into()),
+                }],
+                left_parenthesis_token: TokenSource::dummy_left_parenthesis(),
+
+                right_parenthesis_token: TokenSource::dummy_right_parenthesis(),
+            }),
+            if_token: TokenSource::dummy_if(),
+            left_curley_brace_token: TokenSource::dummy_right_curley_brace(),
+            left_parenthesis_token: TokenSource::dummy_left_parenthesis(),
+
+            right_curley_brace_token: TokenSource::dummy_right_curley_brace(),
+            right_parenthesis_token: TokenSource::dummy_right_parenthesis(),
         };
 
         let result = if_statement.evaluate(&HashMap::new(), &HashMap::new(), &mut Vec::new());
@@ -120,19 +150,37 @@ mod tests {
     #[test]
     fn test_else_if_statement() {
         let if_statement = IfStatement {
-            check_expression: false.into(),
+            check_expression: (false, TokenSource::dummy_false()).into(),
             if_block: vec![Node::FunctionReturn {
-                return_value: Some(1.into()),
+                return_value: Some((1, TokenSource::dummy_uint(1)).into()),
             }],
             else_if_blocks: vec![ElseIfBlock {
-                check: true.into(),
+                check: (true, TokenSource::dummy_true()).into(),
                 block: vec![Node::FunctionReturn {
-                    return_value: Some(3.into()),
+                    return_value: Some((3, TokenSource::dummy_uint(3)).into()),
                 }],
+                else_token: TokenSource::dummy_else(),
+                if_token: TokenSource::dummy_if(),
+                left_curley_brace_token: TokenSource::dummy_right_curley_brace(),
+                left_parenthesis_token: TokenSource::dummy_left_parenthesis(),
+
+                right_curley_brace_token: TokenSource::dummy_right_curley_brace(),
+                right_parenthesis_token: TokenSource::dummy_right_parenthesis(),
             }],
-            else_block: Some(vec![Node::FunctionReturn {
-                return_value: Some(2.into()),
-            }]),
+            else_block: Some(ElseBlock {
+                nodes: vec![Node::FunctionReturn {
+                    return_value: Some((2, TokenSource::dummy_uint(2)).into()),
+                }],
+                left_parenthesis_token: TokenSource::dummy_left_parenthesis(),
+
+                right_parenthesis_token: TokenSource::dummy_right_parenthesis(),
+            }),
+            if_token: TokenSource::dummy_if(),
+            left_curley_brace_token: TokenSource::dummy_right_curley_brace(),
+            left_parenthesis_token: TokenSource::dummy_left_parenthesis(),
+
+            right_curley_brace_token: TokenSource::dummy_right_curley_brace(),
+            right_parenthesis_token: TokenSource::dummy_right_parenthesis(),
         };
 
         let result = if_statement.evaluate(&HashMap::new(), &HashMap::new(), &mut Vec::new());
@@ -149,12 +197,18 @@ mod tests {
     #[should_panic]
     fn test_if_statement_incorrect_check() {
         let if_statement = IfStatement {
-            check_expression: 10.into(),
+            check_expression: (10, TokenSource::dummy_uint(10)).into(),
             if_block: vec![Node::FunctionReturn {
-                return_value: Some(1.into()),
+                return_value: Some((1, TokenSource::dummy_uint(1)).into()),
             }],
             else_if_blocks: Vec::new(),
             else_block: None,
+            if_token: TokenSource::dummy_if(),
+            left_curley_brace_token: TokenSource::dummy_right_curley_brace(),
+            left_parenthesis_token: TokenSource::dummy_left_parenthesis(),
+
+            right_curley_brace_token: TokenSource::dummy_right_curley_brace(),
+            right_parenthesis_token: TokenSource::dummy_right_parenthesis(),
         };
 
         if_statement.evaluate(&HashMap::new(), &HashMap::new(), &mut Vec::new());
@@ -164,17 +218,30 @@ mod tests {
     #[should_panic]
     fn test_else_if_statement_incorrect_check() {
         let if_statement = IfStatement {
-            check_expression: false.into(),
+            check_expression: (false, TokenSource::dummy_false()).into(),
             if_block: vec![Node::FunctionReturn {
-                return_value: Some(1.into()),
+                return_value: Some((1, TokenSource::dummy_uint(1)).into()),
             }],
             else_if_blocks: vec![ElseIfBlock {
-                check: 10.into(),
+                check: (10, TokenSource::dummy_uint(10)).into(),
                 block: vec![Node::FunctionReturn {
-                    return_value: Some(3.into()),
+                    return_value: Some((3, TokenSource::dummy_uint(3)).into()),
                 }],
+                if_token: TokenSource::dummy_if(),
+                left_curley_brace_token: TokenSource::dummy_right_curley_brace(),
+                left_parenthesis_token: TokenSource::dummy_left_parenthesis(),
+
+                right_curley_brace_token: TokenSource::dummy_right_curley_brace(),
+                right_parenthesis_token: TokenSource::dummy_right_parenthesis(),
+                else_token: TokenSource::dummy_else(),
             }],
             else_block: None,
+            if_token: TokenSource::dummy_if(),
+            left_curley_brace_token: TokenSource::dummy_right_curley_brace(),
+            left_parenthesis_token: TokenSource::dummy_left_parenthesis(),
+
+            right_curley_brace_token: TokenSource::dummy_right_curley_brace(),
+            right_parenthesis_token: TokenSource::dummy_right_parenthesis(),
         };
 
         if_statement.evaluate(&HashMap::new(), &HashMap::new(), &mut Vec::new());

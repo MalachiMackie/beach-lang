@@ -38,12 +38,12 @@ impl Display for Token {
     }
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct TokenSource {
-    token: Token,
-    file: String,
-    line: u32,
-    character_range: Range<u32>,
+    pub token: Token,
+    pub file: String,
+    pub line: u32,
+    pub character_range: Range<u32>,
 }
 
 impl TokenSource {
@@ -52,12 +52,72 @@ impl TokenSource {
             token,
             file: file.to_owned(),
             line,
-            character_range
+            character_range,
         }
     }
 
     pub fn token(&self) -> &Token {
         &self.token
+    }
+}
+
+#[cfg(test)]
+impl TokenSource {
+    pub fn dummy(token: Token) -> Self {
+        Self {
+            character_range: 1..1,
+            file: "my_file".to_owned(),
+            line: 1,
+            token,
+        }
+    }
+
+    pub fn dummy_identifier(identifier: &str) -> Self {
+        Self::dummy(Token::Identifier(identifier.to_owned()))
+    }
+
+    pub fn dummy_left_parenthesis() -> Self {
+        Self::dummy(Token::LeftParenthesis)
+    }
+
+    pub fn dummy_right_parenthesis() -> Self {
+        Self::dummy(Token::RightParenthesis)
+    }
+
+    pub fn dummy_left_curley_brace() -> Self {
+        Self::dummy(Token::LeftCurleyBrace)
+    }
+
+    pub fn dummy_right_curley_brace() -> Self {
+        Self::dummy(Token::RightCurleyBrace)
+    }
+
+    pub fn dummy_true() -> Self {
+        Self::dummy(Token::TrueKeyword)
+    }
+
+    pub fn dummy_false() -> Self {
+        Self::dummy(Token::FalseKeyword)
+    }
+
+    pub fn dummy_uint(value: u32) -> Self {
+        Self::dummy(Token::UIntValue(value))
+    }
+
+    pub fn dummy_if() -> Self {
+        Self::dummy(Token::IfKeyword)
+    }
+
+    pub fn dummy_else() -> Self {
+        Self::dummy(Token::ElseKeyword)
+    }
+
+    pub fn dummy_function() -> Self {
+        Self::dummy(Token::FunctionKeyword)
+    }
+
+    pub fn dummy_comma() -> Self {
+        Self::dummy(Token::Comma)
     }
 }
 
@@ -182,7 +242,7 @@ mod tests {
             builders::ast_builder::AstBuilder,
             node::{FunctionParameter, Type},
         },
-        token_stream::token::Token,
+        token_stream::token::{Token, TokenSource},
     };
 
     /// function my_function(boolean param_1, uint param_2) -> uint
@@ -264,7 +324,9 @@ mod tests {
                                     .build()
                             })
                         })
-                        .statement(|statement| statement.return_value(|_| 1.into()))
+                        .statement(|statement| {
+                            statement.return_value(|_| (1, TokenSource::dummy_uint(1)).into())
+                        })
                         .build()
                     })
             })
@@ -272,8 +334,8 @@ mod tests {
                 statement.function_call(|function_call| {
                     function_call
                         .function_id("my_function")
-                        .parameter(|_| true.into())
-                        .parameter(|_| 10.into())
+                        .parameter(|_| (true, TokenSource::dummy_true()).into())
+                        .parameter(|_| (10, TokenSource::dummy_uint(10)).into())
                         .build()
                 })
             });

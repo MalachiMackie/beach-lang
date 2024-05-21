@@ -174,7 +174,7 @@ fn take_function_call_expression(
 mod tests {
     use crate::{
         ast::{builders::ast_builder::AstBuilder, node::Type},
-        token_stream::token::Token,
+        token_stream::token::{Token, TokenSource},
     };
 
     /// boolean my_var = my_function();
@@ -453,7 +453,10 @@ mod tests {
                                 .function_id("my_function")
                                 .parameter(|parameter| {
                                     parameter.operation(|operation| {
-                                        operation.plus(|_| 10.into(), |_| 12.into())
+                                        operation.plus(
+                                            |_| (10, TokenSource::dummy_uint(10)).into(),
+                                            |_| (12, TokenSource::dummy_uint(12)).into(),
+                                        )
                                     })
                                 })
                                 .build()
@@ -492,7 +495,9 @@ mod tests {
                             function_call
                                 .function_id("my_function")
                                 .parameter(|param| {
-                                    param.operation(|operation| operation.not(|_| true.into()))
+                                    param.operation(|operation| {
+                                        operation.not(|_| (true, TokenSource::dummy_true()).into())
+                                    })
                                 })
                                 .build()
                         })
@@ -532,7 +537,10 @@ mod tests {
                                 .function_id("my_function")
                                 .parameter(|parameter| {
                                     parameter.operation(|operation| {
-                                        operation.greater_than(|_| 10.into(), |_| 12.into())
+                                        operation.greater_than(
+                                            |_| (10, TokenSource::dummy_uint(10)).into(),
+                                            |_| (12, TokenSource::dummy_uint(12)).into(),
+                                        )
                                     })
                                 })
                                 .build()
@@ -570,10 +578,13 @@ mod tests {
                     .with_assignment(|value| {
                         value.operation(|operation| {
                             operation.plus(
-                                |_| 10.into(),
+                                |_| (10, TokenSource::dummy_uint(10)).into(),
                                 |right| {
                                     right.operation(|operation| {
-                                        operation.plus(|_| 11.into(), |_| 12.into())
+                                        operation.plus(
+                                            |_| (11, TokenSource::dummy_uint(11)).into(),
+                                            |_| (12, TokenSource::dummy_uint(12)).into(),
+                                        )
                                     })
                                 },
                             )
@@ -614,10 +625,20 @@ mod tests {
                             operation.greater_than(
                                 |left| {
                                     left.function_call(|function_call| {
-                                        function_call.function_id("function_1").no_parameters().build()
+                                        function_call
+                                            .function_id("function_1")
+                                            .no_parameters()
+                                            .build()
                                     })
                                 },
-                                |right| right.function_call(|function_call| function_call.function_id("function_2").no_parameters().build()),
+                                |right| {
+                                    right.function_call(|function_call| {
+                                        function_call
+                                            .function_id("function_2")
+                                            .no_parameters()
+                                            .build()
+                                    })
+                                },
                             )
                         })
                     })
@@ -629,7 +650,12 @@ mod tests {
 
     #[test]
     fn expression_no_tokens() {
-        let tokens = vec![Token::InferKeyword, Token::Identifier("my_var".to_owned()), Token::AssignmentOperator, Token::SemiColon];
+        let tokens = vec![
+            Token::InferKeyword,
+            Token::Identifier("my_var".to_owned()),
+            Token::AssignmentOperator,
+            Token::SemiColon,
+        ];
 
         let result = AstBuilder::from_token_stream(tokens);
 
@@ -638,7 +664,13 @@ mod tests {
 
     #[test]
     fn expression_plus_without_left() {
-        let tokens = vec![Token::InferKeyword, Token::Identifier("my_var".to_owned()), Token::AssignmentOperator, Token::PlusOperator, Token::SemiColon];
+        let tokens = vec![
+            Token::InferKeyword,
+            Token::Identifier("my_var".to_owned()),
+            Token::AssignmentOperator,
+            Token::PlusOperator,
+            Token::SemiColon,
+        ];
 
         let result = AstBuilder::from_token_stream(tokens);
 
@@ -647,7 +679,13 @@ mod tests {
 
     #[test]
     fn expression_greater_than_without_left() {
-        let tokens = vec![Token::InferKeyword, Token::Identifier("my_var".to_owned()), Token::AssignmentOperator, Token::RightAngle, Token::SemiColon];
+        let tokens = vec![
+            Token::InferKeyword,
+            Token::Identifier("my_var".to_owned()),
+            Token::AssignmentOperator,
+            Token::RightAngle,
+            Token::SemiColon,
+        ];
 
         let result = AstBuilder::from_token_stream(tokens);
 
@@ -656,10 +694,18 @@ mod tests {
 
     #[test]
     fn expression_unexpected_token() {
-        let tokens = vec![Token::InferKeyword, Token::Identifier("my_var".to_owned()), Token::AssignmentOperator, Token::LeftCurleyBrace, Token::SemiColon];
+        let tokens = vec![
+            Token::InferKeyword,
+            Token::Identifier("my_var".to_owned()),
+            Token::AssignmentOperator,
+            Token::LeftCurleyBrace,
+            Token::SemiColon,
+        ];
 
         let result = AstBuilder::from_token_stream(tokens);
 
-        assert!(matches!(result, Err(e) if e.len() == 1 && e[0].message == "unexpected token LeftCurleyBrace"));
+        assert!(
+            matches!(result, Err(e) if e.len() == 1 && e[0].message == "unexpected token LeftCurleyBrace")
+        );
     }
 }

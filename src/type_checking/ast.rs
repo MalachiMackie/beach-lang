@@ -37,9 +37,12 @@ impl Ast {
 
 #[cfg(test)]
 mod tests {
-    use crate::ast::{
-        builders::ast_builder::AstBuilder,
-        node::{FunctionParameter, Type},
+    use crate::{
+        ast::{
+            builders::ast_builder::AstBuilder,
+            node::{FunctionParameter, Type},
+        },
+        token_stream::token::TokenSource,
     };
 
     #[test]
@@ -64,7 +67,7 @@ mod tests {
                 statement.function_call(|fn_call| {
                     fn_call
                         .function_id("print")
-                        .parameter(|_| 10.into())
+                        .parameter(|_| (10, TokenSource::dummy_uint(10)).into())
                         .build()
                 })
             })
@@ -72,7 +75,7 @@ mod tests {
                 statement.function_call(|fn_call| {
                     fn_call
                         .function_id("my_function")
-                        .parameter(|_| true.into())
+                        .parameter(|_| (true, TokenSource::dummy_true()).into())
                         .build()
                 })
             })
@@ -100,7 +103,7 @@ mod tests {
                 statement.function_call(|fn_call| {
                     fn_call
                         .function_id("my_function")
-                        .parameter(|_| 10.into())
+                        .parameter(|_| (10, TokenSource::dummy_uint(10)).into())
                         .build()
                 })
             })

@@ -139,7 +139,7 @@ mod tests {
             builders::ast_builder::AstBuilder,
             node::{FunctionParameter, Type},
         },
-        token_stream::token::Token,
+        token_stream::token::{Token, TokenSource},
     };
 
     /// function my_function()
@@ -177,7 +177,7 @@ mod tests {
                         statement.function_call(|function_call| {
                             function_call
                                 .function_id("print")
-                                .parameter(|_| 1.into())
+                                .parameter(|_| (1, TokenSource::dummy_uint(1)).into())
                                 .build()
                         })
                     })
@@ -300,8 +300,10 @@ mod tests {
                 ])
                 .return_type(Type::Boolean)
                 .body(|body| {
-                    body.statement(|statement| statement.return_value(|_| true.into()))
-                        .build()
+                    body.statement(|statement| {
+                        statement.return_value(|_| (true, TokenSource::dummy_true()).into())
+                    })
+                    .build()
                 })
         });
 

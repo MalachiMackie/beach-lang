@@ -45,9 +45,10 @@ impl VariableDeclarationBuilder {
 
 #[cfg(test)]
 mod tests {
-    
+    use crate::token_stream::token::{Token, TokenSource};
 
     use super::*;
+
     #[test]
     pub fn variable_declaration() {
         let result = VariableDeclarationBuilder::default()
@@ -58,7 +59,7 @@ mod tests {
         let expected = Node::VariableDeclaration {
             var_type: VariableDeclarationType::Type(Type::Boolean),
             var_name: "my_var_name".to_owned(),
-            value: true.into(),
+            value: (true, TokenSource::dummy_true()).into(),
         };
 
         assert_eq!(result, expected);
@@ -74,7 +75,7 @@ mod tests {
         let expected = Node::VariableDeclaration {
             var_type: VariableDeclarationType::Infer,
             var_name: "my_var_name".to_owned(),
-            value: true.into(),
+            value: (true, TokenSource::dummy_true()).into(),
         };
 
         assert_eq!(result, expected);

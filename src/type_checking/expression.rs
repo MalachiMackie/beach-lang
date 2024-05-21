@@ -1,8 +1,6 @@
 use std::collections::HashMap;
 
-use crate::ast::node::{
-    Expression, Function, FunctionId, FunctionReturnType, Type,
-};
+use crate::ast::node::{Expression, Function, FunctionId, FunctionReturnType, Type};
 
 use super::TypeCheckingError;
 
@@ -13,17 +11,20 @@ impl Expression {
         local_variables: &HashMap<String, Type>,
     ) -> Option<Type> {
         match self {
-            Expression::ValueLiteral(value) => Some(value.get_type()),
+            Expression::ValueLiteral(value, _) => Some(value.get_type()),
             Expression::FunctionCall(function_call) => {
                 let function = &functions[&function_call.function_id];
 
                 match function.return_type() {
                     FunctionReturnType::Void => None,
-                    FunctionReturnType::Type(return_type) => Some(return_type.clone()),
+                    FunctionReturnType::Type {
+                        return_type: return_type,
+                        ..
+                    } => Some(return_type.clone()),
                 }
             }
             Expression::Operation(operation) => Some(operation.get_type()),
-            Expression::VariableAccess(var_name) => local_variables.get(var_name).copied(),
+            Expression::VariableAccess(var_name, _) => local_variables.get(var_name).copied(),
         }
     }
 
@@ -33,12 +34,12 @@ impl Expression {
         local_variables: &HashMap<String, Type>,
     ) -> Result<(), Vec<TypeCheckingError>> {
         match self {
-            Expression::ValueLiteral(_) => Ok(()),
+            Expression::ValueLiteral(_, _) => Ok(()),
             Expression::FunctionCall(function_call) => {
                 function_call.type_check(functions, local_variables)
             }
             Expression::Operation(operation) => operation.type_check(functions, local_variables),
-            Expression::VariableAccess(var_name) => {
+            Expression::VariableAccess(var_name, _) => {
                 type_check_variable_access(var_name, local_variables).map_err(|err| vec![err])
             }
         }
@@ -61,16 +62,19 @@ fn type_check_variable_access(
 mod tests {
     use std::collections::HashMap;
 
-    use crate::ast::node::{
-        Expression, Function, FunctionCall, FunctionId, FunctionParameter,
-        FunctionReturnType, Operation, Type, UnaryOperation,
+    use crate::{
+        ast::node::{
+            Expression, Function, FunctionCall, FunctionId, FunctionParameter, FunctionReturnType,
+            Operation, Type, UnaryOperation,
+        },
+        token_stream::token::{Token, TokenSource},
     };
 
     use super::type_check_variable_access;
 
     #[test]
     fn expression_get_type_value_literal() {
-        let expression: Expression = true.into();
+        let expression: Expression = (true, TokenSource::dummy_true()).into();
         let result = expression.get_type(&HashMap::new(), &HashMap::new());
 
         assert_eq!(result, Some(Type::Boolean));
@@ -80,7 +84,8 @@ mod tests {
     fn expression_get_type_operation() {
         let expression = Expression::Operation(Operation::Unary {
             operation: UnaryOperation::Not,
-            value: Box::new(true.into()),
+            value: Box::new((true, TokenSource::dummy_true()).into()),
+            operator_token: TokenSource::dummy(Token::NotOperator),
         });
 
         let result = expression.get_type(&HashMap::new(), &HashMap::new());
@@ -93,6 +98,11 @@ mod tests {
         let expression = Expression::FunctionCall(FunctionCall {
             function_id: FunctionId("my_function".to_owned()),
             parameters: Vec::new(),
+            comma_tokens: Vec::new(),
+            function_id_token: TokenSource::dummy(Token::Identifier("my_function".to_owned())),
+            left_parenthesis_token: TokenSource::dummy_left_parenthesis(),
+
+            right_parenthesis_token: TokenSource::dummy_right_parenthesis(),
         });
 
         let functions = HashMap::from_iter([(
@@ -101,7 +111,13 @@ mod tests {
                 id: FunctionId("my_function".to_owned()),
                 name: "my_function".to_owned(),
                 parameters: Vec::new(),
-                return_type: FunctionReturnType::Type(Type::UInt),
+                return_type: FunctionReturnType::Type {
+                    return_type: Type::UInt,
+                    function_signiture_separator_token: TokenSource::dummy(
+                        Token::FunctionSignitureSplitter,
+                    ),
+                    type_token: TokenSource::dummy(Token::TypeKeyword(Type::UInt)),
+                },
                 body: Vec::new(),
             },
         )]);
@@ -116,6 +132,10 @@ mod tests {
         let expression = Expression::FunctionCall(FunctionCall {
             function_id: FunctionId("my_function".to_owned()),
             parameters: Vec::new(),
+            comma_tokens: Vec::new(),
+            function_id_token: TokenSource::dummy(Token::Identifier("my_function".to_owned())),
+            left_parenthesis_token: TokenSource::dummy_left_parenthesis(),
+            right_parenthesis_token: TokenSource::dummy_right_parenthesis(),
         });
 
         let functions = HashMap::from_iter([(
@@ -136,7 +156,10 @@ mod tests {
 
     #[test]
     fn expression_get_type_variable_access() {
-        let expression = Expression::VariableAccess("my_var".to_owned());
+        let expression = Expression::VariableAccess(
+            "my_var".to_owned(),
+            TokenSource::dummy(Token::Identifier("my_var".to_owned())),
+        );
 
         let local_variables = HashMap::from_iter([("my_var".to_owned(), Type::Boolean)]);
 
@@ -147,7 +170,10 @@ mod tests {
 
     #[test]
     fn expression_get_type_variable_access_missing_variable() {
-        let expression = Expression::VariableAccess("my_var".to_owned());
+        let expression = Expression::VariableAccess(
+            "my_var".to_owned(),
+            TokenSource::dummy(Token::Identifier("my_var".to_owned())),
+        );
 
         let result = expression.get_type(&HashMap::new(), &HashMap::new());
 
@@ -175,7 +201,7 @@ mod tests {
 
     #[test]
     fn expression_type_check_value_literal() {
-        let expression: Expression = true.into();
+        let expression: Expression = (true, TokenSource::dummy_true()).into();
 
         let result = expression.type_check(&HashMap::new(), &HashMap::new());
 
@@ -187,6 +213,11 @@ mod tests {
         let expression = Expression::FunctionCall(FunctionCall {
             function_id: FunctionId("my_function".to_owned()),
             parameters: Vec::new(),
+            comma_tokens: Vec::new(),
+            function_id_token: TokenSource::dummy(Token::Identifier("my_function".to_owned())),
+            left_parenthesis_token: TokenSource::dummy_left_parenthesis(),
+
+            right_parenthesis_token: TokenSource::dummy_right_parenthesis(),
         });
 
         let functions = HashMap::from_iter([(
@@ -195,7 +226,13 @@ mod tests {
                 id: FunctionId("my_function".to_owned()),
                 name: "my_function".to_owned(),
                 parameters: Vec::new(),
-                return_type: FunctionReturnType::Type(Type::Boolean),
+                return_type: FunctionReturnType::Type {
+                    return_type: Type::Boolean,
+                    function_signiture_separator_token: TokenSource::dummy(
+                        Token::FunctionSignitureSplitter,
+                    ),
+                    type_token: TokenSource::dummy(Token::TypeKeyword(Type::Boolean)),
+                },
                 body: Vec::new(),
             },
         )]);
@@ -210,6 +247,11 @@ mod tests {
         let expression = Expression::FunctionCall(FunctionCall {
             function_id: FunctionId("my_function".to_owned()),
             parameters: Vec::new(),
+            comma_tokens: Vec::new(),
+            function_id_token: TokenSource::dummy(Token::Identifier("my_function".to_owned())),
+            left_parenthesis_token: TokenSource::dummy_left_parenthesis(),
+
+            right_parenthesis_token: TokenSource::dummy_right_parenthesis(),
         });
 
         let functions = HashMap::from_iter([(
@@ -221,7 +263,13 @@ mod tests {
                     param_type: Type::Boolean,
                     param_name: "param".to_owned(),
                 }],
-                return_type: FunctionReturnType::Type(Type::Boolean),
+                return_type: FunctionReturnType::Type {
+                    return_type: Type::Boolean,
+                    function_signiture_separator_token: TokenSource::dummy(
+                        Token::FunctionSignitureSplitter,
+                    ),
+                    type_token: TokenSource::dummy(Token::TypeKeyword(Type::Boolean)),
+                },
                 body: Vec::new(),
             },
         )]);
@@ -235,7 +283,8 @@ mod tests {
     fn expression_type_check_operation_successful() {
         let expression = Expression::Operation(Operation::Unary {
             operation: UnaryOperation::Not,
-            value: Box::new(true.into()),
+            value: Box::new((true, TokenSource::dummy_true()).into()),
+            operator_token: TokenSource::dummy(Token::NotOperator),
         });
 
         let result = expression.type_check(&HashMap::new(), &HashMap::new());
@@ -247,7 +296,8 @@ mod tests {
     fn expression_type_check_operation_failure() {
         let expression = Expression::Operation(Operation::Unary {
             operation: UnaryOperation::Not,
-            value: Box::new(10.into()),
+            value: Box::new((10, TokenSource::dummy_uint(10)).into()),
+            operator_token: TokenSource::dummy(Token::NotOperator),
         });
 
         let result = expression.type_check(&HashMap::new(), &HashMap::new());
@@ -257,7 +307,10 @@ mod tests {
 
     #[test]
     fn expression_type_check_variable_access_successful() {
-        let expression = Expression::VariableAccess("my_var".to_owned());
+        let expression = Expression::VariableAccess(
+            "my_var".to_owned(),
+            TokenSource::dummy(Token::Identifier("my_var".to_owned())),
+        );
 
         let local_variables = HashMap::from_iter([("my_var".to_owned(), Type::Boolean)]);
 
@@ -269,7 +322,10 @@ mod tests {
     #[test]
 
     fn expression_type_check_variable_access_failure() {
-        let expression = Expression::VariableAccess("my_var".to_owned());
+        let expression = Expression::VariableAccess(
+            "my_var".to_owned(),
+            TokenSource::dummy(Token::Identifier("my_var".to_owned())),
+        );
 
         let result = expression.type_check(&HashMap::new(), &HashMap::new());
 

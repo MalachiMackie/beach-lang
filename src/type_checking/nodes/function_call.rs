@@ -89,9 +89,12 @@ impl FunctionParameter {
 mod tests {
     use std::collections::HashMap;
 
-    use crate::ast::node::{
-        BinaryOperation, Expression, Function, FunctionCall, FunctionId, FunctionParameter,
-        FunctionReturnType, Node, Operation, Type,
+    use crate::{
+        ast::node::{
+            BinaryOperation, Expression, Function, FunctionCall, FunctionId, FunctionParameter,
+            FunctionReturnType, Node, Operation, Type,
+        },
+        token_stream::token::{Token, TokenSource},
     };
 
     #[test]
@@ -158,7 +161,12 @@ mod tests {
 
         let function_call = Node::FunctionCall(FunctionCall {
             function_id: FunctionId("my_function".to_owned()),
-            parameters: vec![true.into()],
+            parameters: vec![(true, TokenSource::dummy_true()).into()],
+            comma_tokens: Vec::new(),
+            function_id_token: TokenSource::dummy(Token::Identifier("my_function".to_owned())),
+            left_parenthesis_token: TokenSource::dummy_left_parenthesis(),
+
+            right_parenthesis_token: TokenSource::dummy_right_parenthesis(),
         });
 
         let result = function_call.type_check(&functions, &mut HashMap::new(), None);
@@ -190,7 +198,15 @@ mod tests {
 
         let function_call = Node::FunctionCall(FunctionCall {
             function_id: FunctionId("my_function".to_owned()),
-            parameters: vec![10.into(), true.into()],
+            parameters: vec![
+                (10, TokenSource::dummy_uint(10)).into(),
+                (true, TokenSource::dummy_true()).into(),
+            ],
+            comma_tokens: vec![TokenSource::dummy(Token::Comma)],
+            function_id_token: TokenSource::dummy(Token::Identifier("my_function".to_owned())),
+            left_parenthesis_token: TokenSource::dummy_left_parenthesis(),
+
+            right_parenthesis_token: TokenSource::dummy_right_parenthesis(),
         });
 
         let result = function_call.type_check(&functions, &mut HashMap::new(), None);
@@ -202,7 +218,12 @@ mod tests {
     fn function_call_type_check_missing_function() {
         let function_call = Node::FunctionCall(FunctionCall {
             function_id: FunctionId("my_function".to_owned()),
-            parameters: vec![10.into()],
+            parameters: vec![(10, TokenSource::dummy_uint(10)).into()],
+            comma_tokens: Vec::new(),
+            function_id_token: TokenSource::dummy(Token::Identifier("my_function".to_owned())),
+            left_parenthesis_token: TokenSource::dummy_left_parenthesis(),
+
+            right_parenthesis_token: TokenSource::dummy_right_parenthesis(),
         });
 
         let result = function_call.type_check(&HashMap::new(), &mut HashMap::new(), None);
@@ -228,7 +249,15 @@ mod tests {
 
         let function_call = Node::FunctionCall(FunctionCall {
             function_id: FunctionId("my_function".to_owned()),
-            parameters: vec![10.into(), true.into()],
+            parameters: vec![
+                (10, TokenSource::dummy_uint(10)).into(),
+                (true, TokenSource::dummy_true()).into(),
+            ],
+            comma_tokens: vec![TokenSource::dummy(Token::Comma)],
+            function_id_token: TokenSource::dummy(Token::Identifier("my_function".to_owned())),
+            left_parenthesis_token: TokenSource::dummy_left_parenthesis(),
+
+            right_parenthesis_token: TokenSource::dummy_right_parenthesis(),
         });
 
         let result = function_call.type_check(&functions, &mut HashMap::new(), None);
@@ -256,9 +285,15 @@ mod tests {
             function_id: FunctionId("my_function".to_owned()),
             parameters: vec![Expression::Operation(Operation::Binary {
                 operation: BinaryOperation::Plus,
-                left: Box::new(true.into()),
-                right: Box::new(10.into()),
+                left: Box::new((true, TokenSource::dummy_true()).into()),
+                right: Box::new((10, TokenSource::dummy_uint(10)).into()),
+                operator_token: TokenSource::dummy(Token::PlusOperator),
             })],
+            comma_tokens: Vec::new(),
+            function_id_token: TokenSource::dummy(Token::Identifier("my_function".to_owned())),
+            left_parenthesis_token: TokenSource::dummy_left_parenthesis(),
+
+            right_parenthesis_token: TokenSource::dummy_right_parenthesis(),
         });
 
         let result = function_call.type_check(&functions, &mut HashMap::new(), None);

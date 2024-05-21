@@ -128,7 +128,10 @@ fn build_return_statement(
 
 #[cfg(test)]
 mod tests {
-    use crate::{ast::builders::ast_builder::AstBuilder, token_stream::token::Token};
+    use crate::{
+        ast::builders::ast_builder::AstBuilder,
+        token_stream::token::{Token, TokenSource},
+    };
 
     /// return;
     #[test]
@@ -157,7 +160,12 @@ mod tests {
 
         let expected = AstBuilder::default().statement(|statement| {
             statement.return_value(|value| {
-                value.operation(|operation| operation.plus(|_| 1.into(), |_| 2.into()))
+                value.operation(|operation| {
+                    operation.plus(
+                        |_| (1, TokenSource::dummy_uint(1)).into(),
+                        |_| (2, TokenSource::dummy_uint(2)).into(),
+                    )
+                })
             })
         });
 
@@ -188,7 +196,7 @@ mod tests {
                         param.function_call(|function_call| {
                             function_call
                                 .function_id("my_function")
-                                .parameter(|_| true.into())
+                                .parameter(|_| (true, TokenSource::dummy_true()).into())
                                 .build()
                         })
                     })
@@ -245,11 +253,8 @@ mod tests {
     fn statement_return_missing_semicolon() {
         let tokens = vec![Token::ReturnKeyword];
 
-
         let result = AstBuilder::from_token_stream(tokens);
 
-        assert!(
-            matches!(dbg!(result), Err(e) if e.len() >= 1 && e[0].message == "expected ;")
-        );
+        assert!(matches!(dbg!(result), Err(e) if e.len() >= 1 && e[0].message == "expected ;"));
     }
 }

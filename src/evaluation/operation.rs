@@ -14,13 +14,14 @@ impl Operation {
         call_stack: &mut Vec<FunctionId>,
     ) -> Value {
         match self {
-            Operation::Unary { operation, value } => {
+            Operation::Unary { operation, value, .. } => {
                 unary_operation(*operation, value, functions, local_variables, call_stack)
             }
             Operation::Binary {
                 operation,
                 left,
                 right,
+                ..
             } => binary_operation(
                 *operation,
                 left,
@@ -88,6 +89,7 @@ mod tests {
     use crate::{
         ast::node::{BinaryOperation, Operation, UnaryOperation},
         evaluation::operation::greater_than,
+        token_stream::token::{Token, TokenSource},
     };
 
     use super::{binary_operation, not, plus, unary_operation};
@@ -148,8 +150,8 @@ mod tests {
     fn test_binary_operation_plus() {
         let result = binary_operation(
             BinaryOperation::Plus,
-            &10.into(),
-            &10.into(),
+            &(10, TokenSource::dummy_uint(10)).into(),
+            &(10, TokenSource::dummy_uint(10)).into(),
             &HashMap::new(),
             &HashMap::new(),
             &mut Vec::new(),
@@ -162,8 +164,8 @@ mod tests {
     fn test_binary_operation_greater_than() {
         let result = binary_operation(
             BinaryOperation::GreaterThan,
-            &10.into(),
-            &10.into(),
+            &(10, TokenSource::dummy_uint(10)).into(),
+            &(10, TokenSource::dummy_uint(10)).into(),
             &HashMap::new(),
             &HashMap::new(),
             &mut Vec::new(),
@@ -188,7 +190,7 @@ mod tests {
     fn unary_operation_not() {
         let result = unary_operation(
             UnaryOperation::Not,
-            &true.into(),
+            &(true, TokenSource::dummy_true()).into(),
             &HashMap::new(),
             &HashMap::new(),
             &mut Vec::new(),
@@ -201,7 +203,8 @@ mod tests {
     fn evaluate_unary() {
         let result = Operation::Unary {
             operation: UnaryOperation::Not,
-            value: Box::new(true.into()),
+            value: Box::new((true, TokenSource::dummy_true()).into()),
+            operator_token: TokenSource::dummy(Token::NotOperator),
         }
         .evaluate(&HashMap::new(), &HashMap::new(), &mut Vec::new());
 
@@ -212,8 +215,9 @@ mod tests {
     fn evaluate_binary() {
         let result = Operation::Binary {
             operation: BinaryOperation::Plus,
-            left: Box::new(10.into()),
-            right: Box::new(10.into()),
+            left: Box::new((10, TokenSource::dummy_uint(10)).into()),
+            right: Box::new((10, TokenSource::dummy_uint(10)).into()),
+            operator_token: TokenSource::dummy(Token::PlusOperator),
         }
         .evaluate(&HashMap::new(), &HashMap::new(), &mut Vec::new());
 

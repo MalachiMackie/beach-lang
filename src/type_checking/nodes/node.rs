@@ -136,6 +136,7 @@ mod tests {
                 Operation, Type, UnaryOperation, VariableDeclarationType,
             },
         },
+        token_stream::token::{Token, TokenSource},
         type_checking::nodes::node::type_check_nodes,
     };
 
@@ -144,7 +145,7 @@ mod tests {
         let node = Node::VariableDeclaration {
             var_type: VariableDeclarationType::Type(Type::Boolean),
             var_name: "my_var".to_owned(),
-            value: true.into(),
+            value: (true, TokenSource::dummy_true()).into(),
         };
 
         let mut local_variables = HashMap::new();
@@ -161,7 +162,7 @@ mod tests {
         let node = Node::VariableDeclaration {
             var_type: VariableDeclarationType::Infer,
             var_name: "my_var".to_owned(),
-            value: true.into(),
+            value: (true, TokenSource::dummy_true()).into(),
         };
 
         let mut local_variables = HashMap::new();
@@ -178,7 +179,7 @@ mod tests {
         let node = Node::VariableDeclaration {
             var_type: VariableDeclarationType::Type(Type::Boolean),
             var_name: "my_name".to_owned(),
-            value: true.into(),
+            value: (true, TokenSource::dummy_true()).into(),
         };
 
         let mut local_variables = HashMap::from_iter([("my_name".to_owned(), Type::UInt)]);
@@ -200,7 +201,8 @@ mod tests {
             var_name: "my_name".to_owned(),
             value: Expression::Operation(Operation::Unary {
                 operation: UnaryOperation::Not,
-                value: Box::new(10.into()),
+                value: Box::new((10, TokenSource::dummy_uint(10)).into()),
+                operator_token: TokenSource::dummy(Token::NotOperator),
             }),
         };
 
@@ -217,6 +219,11 @@ mod tests {
             value: Expression::FunctionCall(FunctionCall {
                 function_id: FunctionId("my_function".to_owned()),
                 parameters: Vec::new(),
+                comma_tokens: Vec::new(),
+                function_id_token: TokenSource::dummy(Token::Identifier("my_function".to_owned())),
+                left_parenthesis_token: TokenSource::dummy_left_parenthesis(),
+
+                right_parenthesis_token: TokenSource::dummy_right_parenthesis(),
             }),
         };
 
@@ -243,7 +250,7 @@ mod tests {
         let node = Node::VariableDeclaration {
             var_type: VariableDeclarationType::Type(Type::UInt),
             var_name: "my_value".to_owned(),
-            value: true.into(),
+            value: (true, TokenSource::dummy_true()).into(),
         };
 
         let result = node.type_check(&HashMap::new(), &mut HashMap::new(), None);
@@ -258,7 +265,7 @@ mod tests {
         let nodes = vec![Node::VariableDeclaration {
             var_type: VariableDeclarationType::Infer,
             var_name: "my_var".to_owned(),
-            value: true.into(),
+            value: (true, TokenSource::dummy_true()).into(),
         }];
 
         let result = type_check_nodes(&nodes, &HashMap::new(), &HashMap::new(), None);
@@ -269,14 +276,20 @@ mod tests {
     #[test]
     fn type_check_nodes_return_value() {
         let nodes = vec![Node::FunctionReturn {
-            return_value: Some(true.into()),
+            return_value: Some((true, TokenSource::dummy_true()).into()),
         }];
 
         let function = Function::CustomFunction {
             id: FunctionId("my_function".to_owned()),
             name: "my_function".to_owned(),
             parameters: Vec::new(),
-            return_type: FunctionReturnType::Type(Type::Boolean),
+            return_type: FunctionReturnType::Type {
+                return_type: Type::Boolean,
+                function_signiture_separator_token: TokenSource::dummy(
+                        Token::FunctionSignitureSplitter,
+                    ),
+                    type_token: TokenSource::dummy(Token::TypeKeyword(Type::Boolean)),
+            },
             body: Vec::new(),
         };
 
@@ -298,12 +311,12 @@ mod tests {
             Node::VariableDeclaration {
                 var_type: VariableDeclarationType::Type(Type::Boolean),
                 var_name: "var_1".to_owned(),
-                value: 32.into(),
+                value: (32, TokenSource::dummy_uint(32)).into(),
             },
             Node::VariableDeclaration {
                 var_type: VariableDeclarationType::Type(Type::Boolean),
                 var_name: "var_2".to_owned(),
-                value: 32.into(),
+                value: (32, TokenSource::dummy_uint(32)).into(),
             },
         ];
 
@@ -315,7 +328,7 @@ mod tests {
     #[test]
     fn test_if_statement_type_checking() {
         let node = IfStatementBuilder::new()
-            .check_expression(|_| true.into())
+            .check_expression(|_| (true, TokenSource::dummy_true()).into())
             .body(|body| body.build())
             .build();
 

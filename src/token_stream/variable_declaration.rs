@@ -46,7 +46,7 @@ pub(super) fn try_create_variable_declaration(
 mod tests {
     use crate::{
         ast::{builders::ast_builder::AstBuilder, node::Type},
-        token_stream::token::Token,
+        token_stream::token::{Token, TokenSource},
     };
 
     /// infer my_var = true;
@@ -67,7 +67,7 @@ mod tests {
                 var_decl
                     .infer_type()
                     .name("my_var")
-                    .with_assignment(|_| true.into())
+                    .with_assignment(|_| (true, TokenSource::dummy_true()).into())
             })
         });
 
@@ -123,7 +123,7 @@ mod tests {
                         assignment.operation(|operation| {
                             operation.greater_than(
                                 |expression| expression.variable("other_var"),
-                                |_| 11.into(),
+                                |_| (11, TokenSource::dummy_uint(11)).into(),
                             )
                         })
                     })
@@ -166,7 +166,7 @@ mod tests {
                                             .build()
                                     })
                                 },
-                                |_| 10.into(),
+                                |_| (10, TokenSource::dummy_uint(10)).into(),
                             )
                         })
                     })
@@ -193,7 +193,7 @@ mod tests {
             Token::InferKeyword,
             Token::Identifier("my_variable".to_owned()),
             Token::TrueKeyword,
-            Token::SemiColon
+            Token::SemiColon,
         ];
 
         let result = AstBuilder::from_token_stream(tokens);

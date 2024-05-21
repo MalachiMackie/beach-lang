@@ -1,4 +1,7 @@
-use crate::ast::node::{Expression, FunctionCall, Node};
+use crate::{
+    ast::node::{Expression, FunctionCall, Node, NodeSource},
+    token_stream::token::TokenSource,
+};
 
 use super::{
     expression_builder::ExpressionBuilder, function_call_builder::FunctionCallBuilder,
@@ -7,11 +10,20 @@ use super::{
 };
 
 #[derive(Default)]
-pub struct StatementBuilder {}
+pub struct StatementBuilder {
+    start_token: Option<TokenSource>,
+    end_token: Option<TokenSource>,
+}
 
 impl StatementBuilder {
     pub fn return_void(self) -> Node {
-        Node::FunctionReturn { return_value: None }
+        let start_token = self.start_token.expect("start_token to have been set");
+        let end_token = self.end_token.expect("end_token to have been set");
+        let node_source = NodeSource::from_tokens(start_token, end_token);
+        Node::FunctionReturn {
+            return_value: None,
+            source: node_source,
+        }
     }
 
     pub fn var_declaration(
@@ -44,9 +56,12 @@ impl StatementBuilder {
 
 #[cfg(test)]
 mod tests {
-    use crate::ast::{
-        builders::statement_builder::StatementBuilder,
-        node::{FunctionCall, FunctionId, IfStatement, Node},
+    use crate::{
+        ast::{
+            builders::statement_builder::StatementBuilder,
+            node::{FunctionCall, FunctionId, IfStatement, Node},
+        },
+        token_stream::token::{Token, TokenSource},
     };
 
     #[test]
@@ -61,7 +76,7 @@ mod tests {
         let expected = Node::VariableDeclaration {
             var_type: crate::ast::node::VariableDeclarationType::Infer,
             var_name: "my_var".to_owned(),
-            value: true.into(),
+            value: (true, TokenSource::dummy_true()).into(),
         };
 
         assert_eq!(actual, expected);
@@ -77,10 +92,16 @@ mod tests {
         });
 
         let expected = Node::IfStatement(IfStatement {
-            check_expression: true.into(),
+            check_expression: (true, TokenSource::dummy_true()).into(),
             if_block: Vec::new(),
             else_if_blocks: Vec::new(),
             else_block: None,
+            if_token: TokenSource::dummy_if(),
+            left_curley_brace_token: TokenSource::dummy_right_curley_brace(),
+            left_parenthesis_token: TokenSource::dummy_left_parenthesis(),
+
+            right_curley_brace_token: TokenSource::dummy_right_curley_brace(),
+            right_parenthesis_token: TokenSource::dummy_right_parenthesis(),
         });
 
         assert_eq!(actual, expected);
@@ -98,6 +119,11 @@ mod tests {
         let expected = Node::FunctionCall(FunctionCall {
             function_id: FunctionId("my_function".to_owned()),
             parameters: Vec::new(),
+            comma_tokens: Vec::new(),
+            function_id_token: TokenSource::dummy(Token::Identifier("my_function".to_owned())),
+            left_parenthesis_token: TokenSource::dummy_left_parenthesis(),
+
+            right_parenthesis_token: TokenSource::dummy_right_parenthesis(),
         });
 
         assert_eq!(actual, expected);
@@ -109,7 +135,7 @@ mod tests {
             .return_value(|return_value| return_value.value_literal(true.into()));
 
         let expected = Node::FunctionReturn {
-            return_value: Some(true.into()),
+            return_value: Some((true, TokenSource::dummy_true()).into()),
         };
 
         assert_eq!(actual, expected);

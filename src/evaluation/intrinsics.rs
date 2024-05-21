@@ -42,7 +42,7 @@ fn intrinsic_print(value: &Value) {
 mod tests {
     use std::collections::HashMap;
 
-    use crate::ast::node::FunctionId;
+    use crate::{ast::node::FunctionId, token_stream::token::TokenSource};
 
     use super::{evaluate_intrinsic_function, get_intrinsic_functions};
 

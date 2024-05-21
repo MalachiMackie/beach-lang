@@ -51,6 +51,7 @@ mod tests {
             FunctionReturnType, IfStatement, Node, Type, VariableDeclarationType,
         },
         evaluation::NodeResult,
+        token_stream::token::{Token, TokenSource},
     };
 
     use super::evaluate_nodes;
@@ -61,11 +62,19 @@ mod tests {
             Node::VariableDeclaration {
                 var_type: VariableDeclarationType::Infer,
                 var_name: "my_var".to_owned(),
-                value: true.into(),
+                value: (true, TokenSource::dummy_true()).into(),
             },
             Node::FunctionCall(FunctionCall {
                 function_id: FunctionId("my_function".to_owned()),
-                parameters: vec![Expression::VariableAccess("my_var".to_owned())],
+                parameters: vec![Expression::VariableAccess(
+                    "my_var".to_owned(),
+                    TokenSource::dummy(Token::Identifier("my_var".to_owned())),
+                )],
+                comma_tokens: Vec::new(),
+                function_id_token: TokenSource::dummy(Token::Identifier("my_function".to_owned())),
+                left_parenthesis_token: TokenSource::dummy_left_parenthesis(),
+
+                right_parenthesis_token: TokenSource::dummy_right_parenthesis(),
             }),
         ];
 
@@ -94,19 +103,28 @@ mod tests {
             Node::VariableDeclaration {
                 var_type: VariableDeclarationType::Infer,
                 var_name: "my_var".to_owned(),
-                value: true.into(),
+                value: (true, TokenSource::dummy_true()).into(),
             },
             Node::IfStatement(IfStatement {
-                check_expression: true.into(),
+                check_expression: (true, TokenSource::dummy_true()).into(),
                 if_block: vec![Node::FunctionReturn {
-                    return_value: Some(Expression::VariableAccess("my_var".to_owned())),
+                    return_value: Some(Expression::VariableAccess(
+                        "my_var".to_owned(),
+                        TokenSource::dummy(Token::Identifier("my_var".to_owned())),
+                    )),
                 }],
                 else_if_blocks: Vec::new(),
                 else_block: None,
+                if_token: TokenSource::dummy_if(),
+                left_curley_brace_token: TokenSource::dummy_right_curley_brace(),
+                left_parenthesis_token: TokenSource::dummy_left_parenthesis(),
+
+                right_curley_brace_token: TokenSource::dummy_right_curley_brace(),
+                right_parenthesis_token: TokenSource::dummy_right_parenthesis(),
             }),
             // extra return to check we return out early if we get a return value
             Node::FunctionReturn {
-                return_value: Some(false.into()),
+                return_value: Some((false, TokenSource::dummy_false()).into()),
             },
         ];
 
@@ -137,10 +155,20 @@ mod tests {
             Node::FunctionCall(FunctionCall {
                 function_id: FunctionId("function_1".to_owned()),
                 parameters: Vec::new(),
+                comma_tokens: Vec::new(),
+                function_id_token: TokenSource::dummy(Token::Identifier("function_1".to_owned())),
+                left_parenthesis_token: TokenSource::dummy_left_parenthesis(),
+
+                right_parenthesis_token: TokenSource::dummy_right_parenthesis(),
             }),
             Node::FunctionCall(FunctionCall {
                 function_id: FunctionId("print".to_owned()),
-                parameters: vec![10.into()],
+                parameters: vec![(10, TokenSource::dummy_uint(10)).into()],
+                comma_tokens: Vec::new(),
+                function_id_token: TokenSource::dummy(Token::Identifier("print".to_owned())),
+                left_parenthesis_token: TokenSource::dummy_left_parenthesis(),
+
+                right_parenthesis_token: TokenSource::dummy_right_parenthesis(),
             }),
         ];
 

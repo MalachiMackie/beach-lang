@@ -38,12 +38,12 @@ impl Function {
             };
 
         match (found_return_type, return_type) {
-            (None, FunctionReturnType::Type(_)) => Err(vec![TypeCheckingError {
+            (None, FunctionReturnType::Type{..}) => Err(vec![TypeCheckingError {
                 message: "expected return value, but void was returned".to_owned(),
             }]),
             (Some(_), FunctionReturnType::Void) => unreachable!("return statement type checking should validate that some can't be returned from void function"),
             // expect return type checking to happen at the return site
-            (Some(_), FunctionReturnType::Type(_)) => Ok(()),
+            (Some(_), FunctionReturnType::Type{..}) => Ok(()),
             (None, FunctionReturnType::Void) => Ok(()),
         }
     }
@@ -53,8 +53,11 @@ impl Function {
 mod tests {
     use std::collections::HashMap;
 
-    use crate::ast::node::{
-        Expression, Function, FunctionId, FunctionParameter, FunctionReturnType, Node, Type,
+    use crate::{
+        ast::node::{
+            Expression, Function, FunctionId, FunctionParameter, FunctionReturnType, Node, Type,
+        },
+        token_stream::token::{Token, TokenSource},
     };
 
     #[test]
@@ -72,9 +75,18 @@ mod tests {
                     param_name: "intrinsic_any".to_owned(),
                 },
             ],
-            return_type: FunctionReturnType::Type(Type::Boolean),
+            return_type: FunctionReturnType::Type {
+                return_type: Type::Boolean,
+                function_signiture_separator_token: TokenSource::dummy(
+                    Token::FunctionSignitureSplitter,
+                ),
+                type_token: TokenSource::dummy(Token::TypeKeyword(Type::Boolean)),
+            },
             body: vec![Node::FunctionReturn {
-                return_value: Some(Expression::VariableAccess("my_var".to_owned())),
+                return_value: Some(Expression::VariableAccess(
+                    "my_var".to_owned(),
+                    TokenSource::dummy(Token::Identifier("my_var".to_owned())),
+                )),
             }],
         };
 
@@ -108,9 +120,15 @@ mod tests {
                 param_type: Type::Boolean,
                 param_name: "my_var".to_owned(),
             }],
-            return_type: FunctionReturnType::Type(Type::Boolean),
+            return_type: FunctionReturnType::Type {
+                return_type: Type::Boolean,
+                function_signiture_separator_token: TokenSource::dummy(
+                    Token::FunctionSignitureSplitter,
+                ),
+                type_token: TokenSource::dummy(Token::TypeKeyword(Type::Boolean)),
+            },
             body: vec![Node::FunctionReturn {
-                return_value: Some(10.into()),
+                return_value: Some((10, TokenSource::dummy_uint(10)).into()),
             }],
         };
 
@@ -127,7 +145,13 @@ mod tests {
             id: FunctionId("my_function".to_owned()),
             name: "my_function".to_owned(),
             parameters: Vec::new(),
-            return_type: FunctionReturnType::Type(Type::Boolean),
+            return_type: FunctionReturnType::Type {
+                return_type: Type::Boolean,
+                function_signiture_separator_token: TokenSource::dummy(
+                    Token::FunctionSignitureSplitter,
+                ),
+                type_token: TokenSource::dummy(Token::TypeKeyword(Type::Boolean)),
+            },
             body: Vec::new(),
         };
 
@@ -153,7 +177,6 @@ mod tests {
         let functions = HashMap::from_iter([(function.id().clone(), function.clone())]);
 
         let result = function.type_check(&functions);
-
 
         assert!(matches!(result, Ok(())));
     }

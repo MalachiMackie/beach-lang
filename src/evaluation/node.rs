@@ -32,6 +32,7 @@ impl Node {
             Node::FunctionCall(FunctionCall {
                 function_id,
                 parameters,
+                ..
             }) => {
                 let function = &functions[function_id];
                 function.evaluate(parameters.clone(), &local_variables, functions, call_stack);
@@ -55,6 +56,7 @@ mod tests {
             VariableDeclarationType,
         },
         evaluation::NodeResult,
+        token_stream::token::{Token, TokenSource},
     };
 
     #[test]
@@ -62,7 +64,7 @@ mod tests {
         let node = Node::VariableDeclaration {
             var_type: VariableDeclarationType::Infer,
             var_name: "my_var".to_owned(),
-            value: true.into(),
+            value: (true, TokenSource::dummy_true()).into(),
         };
 
         let mut local_variables = HashMap::new();
@@ -80,7 +82,7 @@ mod tests {
     #[test]
     fn test_function_return_with_value() {
         let node = Node::FunctionReturn {
-            return_value: Some(true.into()),
+            return_value: Some((true, TokenSource::dummy_true()).into()),
         };
 
         let result = node.evaluate(&mut HashMap::new(), &mut Vec::new(), &HashMap::new());
@@ -107,6 +109,11 @@ mod tests {
         let node = Node::FunctionCall(FunctionCall {
             function_id: FunctionId("my_function".to_owned()),
             parameters: Vec::new(),
+            comma_tokens: Vec::new(),
+            function_id_token: TokenSource::dummy(Token::Identifier("my_function".to_owned())),
+            left_parenthesis_token: TokenSource::dummy_left_parenthesis(),
+
+            right_parenthesis_token: TokenSource::dummy_right_parenthesis(),
         });
 
         let functions = HashMap::from_iter([(
@@ -128,12 +135,18 @@ mod tests {
     #[test]
     fn test_if_statement_return() {
         let node = Node::IfStatement(IfStatement {
-            check_expression: true.into(),
+            check_expression: (true, TokenSource::dummy_true()).into(),
             if_block: vec![Node::FunctionReturn {
-                return_value: Some(10.into()),
+                return_value: Some((10, TokenSource::dummy_uint(10)).into()),
             }],
             else_if_blocks: Vec::new(),
             else_block: None,
+            if_token: TokenSource::dummy_if(),
+            left_curley_brace_token: TokenSource::dummy_right_curley_brace(),
+            left_parenthesis_token: TokenSource::dummy_left_parenthesis(),
+
+            right_curley_brace_token: TokenSource::dummy_right_curley_brace(),
+            right_parenthesis_token: TokenSource::dummy_right_parenthesis(),
         });
 
         let result = node.evaluate(&mut HashMap::new(), &mut Vec::new(), &HashMap::new());
@@ -149,10 +162,16 @@ mod tests {
     #[test]
     fn test_if_statement_no_return() {
         let node = Node::IfStatement(IfStatement {
-            check_expression: true.into(),
+            check_expression: (true, TokenSource::dummy_true()).into(),
             if_block: Vec::new(),
             else_if_blocks: Vec::new(),
             else_block: None,
+            if_token: TokenSource::dummy_if(),
+            left_curley_brace_token: TokenSource::dummy_right_curley_brace(),
+            left_parenthesis_token: TokenSource::dummy_left_parenthesis(),
+
+            right_curley_brace_token: TokenSource::dummy_right_curley_brace(),
+            right_parenthesis_token: TokenSource::dummy_right_parenthesis(),
         });
 
         let result = node.evaluate(&mut HashMap::new(), &mut Vec::new(), &HashMap::new());

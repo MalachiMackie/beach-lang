@@ -1,5 +1,7 @@
 use std::{collections::HashMap, fmt::Display};
 
+use crate::token_stream::token::TokenSource;
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum Node {
     VariableDeclaration {
@@ -19,13 +21,31 @@ pub struct IfStatement {
     pub check_expression: Expression,
     pub if_block: Vec<Node>,
     pub else_if_blocks: Vec<ElseIfBlock>,
-    pub else_block: Option<Vec<Node>>,
+    pub else_block: Option<ElseBlock>,
+    pub if_token: TokenSource,
+    pub left_parenthesis_token: TokenSource,
+    pub right_parenthesis_token: TokenSource,
+    pub left_curley_brace_token: TokenSource,
+    pub right_curley_brace_token: TokenSource,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ElseBlock {
+    pub nodes: Vec<Node>,
+    pub left_curley_brace_token: TokenSource,
+    pub right_curley_brace_token: TokenSource
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ElseIfBlock {
     pub check: Expression,
     pub block: Vec<Node>,
+    pub else_token: TokenSource,
+    pub if_token: TokenSource,
+    pub left_parenthesis_token: TokenSource,
+    pub right_parenthesis_token: TokenSource,
+    pub left_curley_brace_token: TokenSource,
+    pub right_curley_brace_token: TokenSource,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -35,11 +55,22 @@ pub struct FunctionDeclaration {
     pub parameters: Vec<FunctionParameter>,
     pub return_type: FunctionReturnType,
     pub body: Vec<Node>,
+    pub function_keyword_token: TokenSource,
+    pub function_identifier_token: TokenSource,
+    pub left_parenthesis_token: TokenSource,
+    pub comma_tokens: Vec<TokenSource>,
+    pub right_parenthesis_token: TokenSource,
+    pub left_curley_brace_token: TokenSource,
+    pub right_curley_brace_token: TokenSource,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum FunctionReturnType {
-    Type(Type),
+    Type {
+        return_type: Type,
+        function_signiture_separator_token: TokenSource,
+        type_token: TokenSource,
+    },
     Void,
 }
 
@@ -47,7 +78,9 @@ pub enum FunctionReturnType {
 pub enum FunctionParameter {
     FunctionParameter {
         param_type: Type,
+        type_token: TokenSource,
         param_name: String,
+        param_name_token: TokenSource,
     },
     IntrinsicAny {
         param_name: String,
@@ -63,32 +96,23 @@ impl FunctionParameter {
     }
 }
 
-impl From<(Type, String)> for FunctionParameter {
-    fn from((param_type, name): (Type, String)) -> Self {
-        FunctionParameter::FunctionParameter {
-            param_name: name,
-            param_type,
-        }
-    }
-}
-
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expression {
-    ValueLiteral(Value),
+    ValueLiteral(Value, TokenSource),
     FunctionCall(FunctionCall),
     Operation(Operation),
-    VariableAccess(String),
+    VariableAccess(String, TokenSource),
 }
 
-impl From<bool> for Expression {
-    fn from(value: bool) -> Self {
-        Expression::ValueLiteral(value.into())
+impl From<(bool, TokenSource)> for Expression {
+    fn from((value, source): (bool, TokenSource)) -> Self {
+        Expression::ValueLiteral(value.into(), source)
     }
 }
 
-impl From<u32> for Expression {
-    fn from(value: u32) -> Self {
-        Expression::ValueLiteral(value.into())
+impl From<(u32, TokenSource)> for Expression {
+    fn from((value, source): (u32, TokenSource)) -> Self {
+        Expression::ValueLiteral(value.into(), source)
     }
 }
 
@@ -96,6 +120,10 @@ impl From<u32> for Expression {
 pub struct FunctionCall {
     pub function_id: FunctionId,
     pub parameters: Vec<Expression>,
+    pub left_parenthesis_token: TokenSource,
+    pub right_parenthesis_token: TokenSource,
+    pub comma_tokens: Vec<TokenSource>,
+    pub function_id_token: TokenSource,
 }
 
 #[derive(Debug, PartialEq, Hash, Clone, Eq)]
@@ -189,11 +217,13 @@ pub enum Operation {
     Unary {
         operation: UnaryOperation,
         value: Box<Expression>,
+        operator_token: TokenSource,
     },
     Binary {
         operation: BinaryOperation,
         left: Box<Expression>,
         right: Box<Expression>,
+        operator_token: TokenSource,
     },
 }
 

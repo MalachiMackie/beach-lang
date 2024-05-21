@@ -131,7 +131,7 @@ fn build_if_statement(
 mod tests {
     use crate::{
         ast::builders::{ast_builder::AstBuilder, function_call_builder::FunctionCallBuilder},
-        token_stream::token::Token,
+        token_stream::token::{Token, TokenSource},
     };
 
     /// if (true) { infer a = false; }
@@ -156,14 +156,14 @@ mod tests {
         let expected = AstBuilder::default().statement(|statement| {
             statement.if_statement(|if_statement| {
                 if_statement
-                    .check_expression(|_| true.into())
+                    .check_expression(|_| (true, TokenSource::dummy_true()).into())
                     .body(|body| {
                         body.statement(|statement| {
                             statement.var_declaration(|var_declaration| {
                                 var_declaration
                                     .infer_type()
                                     .name("a")
-                                    .with_assignment(|_| false.into())
+                                    .with_assignment(|_| (false, TokenSource::dummy_false()).into())
                             })
                         })
                         .build()
@@ -202,35 +202,34 @@ mod tests {
 
         let result = AstBuilder::from_token_stream(tokens);
 
-        let expected = AstBuilder::default().statement(|statement| {
-            statement.if_statement(|if_statement| {
-                if_statement
-                    .check_expression(|_| true.into())
-                    .body(|body| {
-                        body.statement(|statement| {
-                            statement.var_declaration(|var_declaration| {
-                                var_declaration
-                                    .infer_type()
-                                    .name("a")
-                                    .with_assignment(|_| false.into())
+        let expected =
+            AstBuilder::default().statement(|statement| {
+                statement.if_statement(|if_statement| {
+                    if_statement
+                        .check_expression(|_| (true, TokenSource::dummy_true()).into())
+                        .body(|body| {
+                            body.statement(|statement| {
+                                statement.var_declaration(|var_declaration| {
+                                    var_declaration.infer_type().name("a").with_assignment(|_| {
+                                        (false, TokenSource::dummy_false()).into()
+                                    })
+                                })
                             })
+                            .build()
+                        })
+                        .else_block(|body| {
+                            body.statement(|statement| {
+                                statement.var_declaration(|var_declaration| {
+                                    var_declaration.infer_type().name("b").with_assignment(|_| {
+                                        (true, TokenSource::dummy_true()).into()
+                                    })
+                                })
+                            })
+                            .build()
                         })
                         .build()
-                    })
-                    .else_block(|body| {
-                        body.statement(|statement| {
-                            statement.var_declaration(|var_declaration| {
-                                var_declaration
-                                    .infer_type()
-                                    .name("b")
-                                    .with_assignment(|_| true.into())
-                            })
-                        })
-                        .build()
-                    })
-                    .build()
-            })
-        });
+                })
+            });
 
         assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
     }
@@ -301,63 +300,60 @@ mod tests {
 
         let result = AstBuilder::from_token_stream(tokens);
 
-        let expected = AstBuilder::default().statement(|statement| {
-            statement.if_statement(|if_statement| {
-                if_statement
-                    .check_expression(|_| true.into())
-                    .body(|body| {
-                        body.statement(|statement| {
-                            statement.var_declaration(|var_declaration| {
-                                var_declaration
-                                    .infer_type()
-                                    .name("a")
-                                    .with_assignment(|_| false.into())
-                            })
-                        })
-                        .build()
-                    })
-                    .else_if(
-                        |_| true.into(),
-                        |body| {
+        let expected =
+            AstBuilder::default().statement(|statement| {
+                statement.if_statement(|if_statement| {
+                    if_statement
+                        .check_expression(|_| (true, TokenSource::dummy_true()).into())
+                        .body(|body| {
                             body.statement(|statement| {
                                 statement.var_declaration(|var_declaration| {
-                                    var_declaration
-                                        .infer_type()
-                                        .name("b")
-                                        .with_assignment(|_| true.into())
+                                    var_declaration.infer_type().name("a").with_assignment(|_| {
+                                        (false, TokenSource::dummy_false()).into()
+                                    })
                                 })
                             })
                             .build()
-                        },
-                    )
-                    .else_if(
-                        |_| true.into(),
-                        |body| {
+                        })
+                        .else_if(
+                            |_| (true, TokenSource::dummy_true()).into(),
+                            |body| {
+                                body.statement(|statement| {
+                                    statement.var_declaration(|var_declaration| {
+                                        var_declaration.infer_type().name("b").with_assignment(
+                                            |_| (true, TokenSource::dummy_true()).into(),
+                                        )
+                                    })
+                                })
+                                .build()
+                            },
+                        )
+                        .else_if(
+                            |_| (true, TokenSource::dummy_true()).into(),
+                            |body| {
+                                body.statement(|statement| {
+                                    statement.var_declaration(|var_declaration| {
+                                        var_declaration.infer_type().name("c").with_assignment(
+                                            |_| (true, TokenSource::dummy_true()).into(),
+                                        )
+                                    })
+                                })
+                                .build()
+                            },
+                        )
+                        .else_block(|body| {
                             body.statement(|statement| {
                                 statement.var_declaration(|var_declaration| {
-                                    var_declaration
-                                        .infer_type()
-                                        .name("c")
-                                        .with_assignment(|_| true.into())
+                                    var_declaration.infer_type().name("d").with_assignment(|_| {
+                                        (true, TokenSource::dummy_true()).into()
+                                    })
                                 })
                             })
                             .build()
-                        },
-                    )
-                    .else_block(|body| {
-                        body.statement(|statement| {
-                            statement.var_declaration(|var_declaration| {
-                                var_declaration
-                                    .infer_type()
-                                    .name("d")
-                                    .with_assignment(|_| true.into())
-                            })
                         })
                         .build()
-                    })
-                    .build()
-            })
-        });
+                })
+            });
 
         assert!(matches!(result, Ok(ast_builder) if ast_builder == expected));
     }
@@ -411,7 +407,7 @@ mod tests {
         let expected = AstBuilder::default().statement(|statement| {
             statement.if_statement(|if_statement| {
                 if_statement
-                    .check_expression(|_| true.into())
+                    .check_expression(|_| (true, TokenSource::dummy_true()).into())
                     .body(|body| {
                         body.statement(|statement| {
                             statement.function_call(function_call_builder.clone())
@@ -419,7 +415,7 @@ mod tests {
                         .statement(|statement| {
                             statement.if_statement(|if_statement| {
                                 if_statement
-                                    .check_expression(|_| true.into())
+                                    .check_expression(|_| (true, TokenSource::dummy_true()).into())
                                     .body(|body| {
                                         body.statement(|statement| {
                                             statement.function_call(function_call_builder.clone())

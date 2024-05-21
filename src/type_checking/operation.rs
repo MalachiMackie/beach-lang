@@ -30,13 +30,14 @@ impl Operation {
         local_variables: &HashMap<String, Type>,
     ) -> Result<(), Vec<TypeCheckingError>> {
         match self {
-            Operation::Unary { operation, value } => {
+            Operation::Unary { operation, value, .. } => {
                 operation.type_check(value, functions, local_variables)
             }
             Operation::Binary {
                 operation,
                 left,
                 right,
+                ..
             } => operation.type_check(left, right, functions, local_variables),
         }
     }
@@ -124,16 +125,20 @@ impl UnaryOperation {
 mod tests {
     use std::collections::HashMap;
 
-    use crate::ast::node::{
-        BinaryOperation, Expression, Function, FunctionCall, FunctionId, FunctionParameter,
-        FunctionReturnType, Operation, Type, UnaryOperation,
+    use crate::{
+        ast::node::{
+            BinaryOperation, Expression, Function, FunctionCall, FunctionId, FunctionParameter,
+            FunctionReturnType, Operation, Type, UnaryOperation,
+        },
+        token_stream::token::{Token, TokenSource},
     };
 
     #[test]
     fn operation_get_type_not() {
         let operation = Operation::Unary {
             operation: UnaryOperation::Not,
-            value: Box::new(true.into()),
+            value: Box::new((true, TokenSource::dummy_true()).into()),
+            operator_token: TokenSource::dummy(Token::NotOperator),
         };
 
         let result = operation.get_type();
@@ -145,8 +150,9 @@ mod tests {
     fn operation_get_type_plus() {
         let operation = Operation::Binary {
             operation: BinaryOperation::Plus,
-            left: Box::new(10.into()),
-            right: Box::new(10.into()),
+            left: Box::new((10, TokenSource::dummy_uint(10)).into()),
+            right: Box::new((10, TokenSource::dummy_uint(10)).into()),
+            operator_token: TokenSource::dummy(Token::PlusOperator),
         };
 
         let result = operation.get_type();
@@ -158,8 +164,9 @@ mod tests {
     fn operation_get_type_greater_than() {
         let operation = Operation::Binary {
             operation: BinaryOperation::GreaterThan,
-            left: Box::new(10.into()),
-            right: Box::new(10.into()),
+            left: Box::new((10, TokenSource::dummy_uint(10)).into()),
+            right: Box::new((10, TokenSource::dummy_uint(10)).into()),
+            operator_token: TokenSource::dummy(Token::RightAngle),
         };
 
         let result = operation.get_type();
@@ -171,7 +178,8 @@ mod tests {
     fn operation_not_type_check_successful() {
         let operation = Operation::Unary {
             operation: UnaryOperation::Not,
-            value: Box::new(true.into()),
+            value: Box::new((true, TokenSource::dummy_true()).into()),
+            operator_token: TokenSource::dummy(Token::NotOperator),
         };
 
         let result = operation.type_check(&HashMap::new(), &HashMap::new());
@@ -183,7 +191,8 @@ mod tests {
     fn operation_not_type_check_failure() {
         let operation = Operation::Unary {
             operation: UnaryOperation::Not,
-            value: Box::new(10.into()),
+            value: Box::new((10, TokenSource::dummy_uint(10)).into()),
+            operator_token: TokenSource::dummy(Token::NotOperator),
         };
 
         let result = operation.type_check(&HashMap::new(), &HashMap::new());
@@ -195,8 +204,9 @@ mod tests {
     fn operation_plus_type_check_success() {
         let operation = Operation::Binary {
             operation: BinaryOperation::GreaterThan,
-            left: Box::new(10.into()),
-            right: Box::new(10.into()),
+            left: Box::new((10, TokenSource::dummy_uint(10)).into()),
+            right: Box::new((10, TokenSource::dummy_uint(10)).into()),
+            operator_token: TokenSource::dummy(Token::RightAngle),
         };
 
         let result = operation.type_check(&HashMap::new(), &HashMap::new());
@@ -208,8 +218,9 @@ mod tests {
     fn operation_plus_type_check_failure() {
         let operation = Operation::Binary {
             operation: BinaryOperation::GreaterThan,
-            left: Box::new(true.into()),
-            right: Box::new(true.into()),
+            left: Box::new((true, TokenSource::dummy_true()).into()),
+            right: Box::new((true, TokenSource::dummy_true()).into()),
+            operator_token: TokenSource::dummy(Token::RightAngle),
         };
 
         let result = operation.type_check(&HashMap::new(), &HashMap::new());
@@ -224,7 +235,13 @@ mod tests {
             value: Box::new(Expression::FunctionCall(FunctionCall {
                 function_id: FunctionId("my_function".to_owned()),
                 parameters: Vec::new(),
+                comma_tokens: Vec::new(),
+                function_id_token: TokenSource::dummy(Token::Identifier("my_function".to_owned())),
+                left_parenthesis_token: TokenSource::dummy_left_parenthesis(),
+
+                right_parenthesis_token: TokenSource::dummy_right_parenthesis(),
             })),
+            operator_token: TokenSource::dummy(Token::NotOperator),
         };
 
         let functions = HashMap::from_iter([(
@@ -236,7 +253,13 @@ mod tests {
                     param_type: Type::Boolean,
                     param_name: "my_param".to_owned(),
                 }],
-                return_type: FunctionReturnType::Type(Type::Boolean),
+                return_type: FunctionReturnType::Type {
+                    return_type: Type::Boolean,
+                    function_signiture_separator_token: TokenSource::dummy(
+                        Token::FunctionSignitureSplitter,
+                    ),
+                    type_token: TokenSource::dummy(Token::TypeKeyword(Type::Boolean)),
+                },
                 body: vec![],
             },
         )]);
@@ -255,11 +278,22 @@ mod tests {
             left: Box::new(Expression::FunctionCall(FunctionCall {
                 function_id: FunctionId("my_function".to_owned()),
                 parameters: Vec::new(),
+                comma_tokens: Vec::new(),
+                function_id_token: TokenSource::dummy(Token::Identifier("my_function".to_owned())),
+                left_parenthesis_token: TokenSource::dummy_left_parenthesis(),
+
+                right_parenthesis_token: TokenSource::dummy_right_parenthesis(),
             })),
             right: Box::new(Expression::FunctionCall(FunctionCall {
                 function_id: FunctionId("my_function".to_owned()),
                 parameters: Vec::new(),
+                comma_tokens: Vec::new(),
+                function_id_token: TokenSource::dummy(Token::Identifier("my_function".to_owned())),
+                left_parenthesis_token: TokenSource::dummy_left_parenthesis(),
+
+                right_parenthesis_token: TokenSource::dummy_right_parenthesis(),
             })),
+            operator_token: TokenSource::dummy(Token::RightAngle),
         };
 
         let functions = HashMap::from_iter([(
@@ -271,7 +305,13 @@ mod tests {
                     param_type: Type::Boolean,
                     param_name: "my_param".to_owned(),
                 }],
-                return_type: FunctionReturnType::Type(Type::UInt),
+                return_type: FunctionReturnType::Type {
+                    return_type: Type::UInt,
+                    function_signiture_separator_token: TokenSource::dummy(
+                        Token::FunctionSignitureSplitter,
+                    ),
+                    type_token: TokenSource::dummy(Token::TypeKeyword(Type::UInt)),
+                },
                 body: vec![],
             },
         )]);

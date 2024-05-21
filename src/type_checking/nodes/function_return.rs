@@ -38,7 +38,13 @@ pub(super) fn type_check_return_value(
                 });
             }
             // non void and no return value
-            (FunctionReturnType::Type(expected_return_type), None) => {
+            (
+                FunctionReturnType::Type {
+                    return_type: expected_return_type,
+                    ..
+                },
+                None,
+            ) => {
                 errors.push(TypeCheckingError {
                     message: format!(
                         "{} expects a return type of {}, but you returned void",
@@ -48,18 +54,20 @@ pub(super) fn type_check_return_value(
                 });
             }
             // non void and incorrect return value
-            (FunctionReturnType::Type(expected_return_type), Some(return_value_type))
-                if *expected_return_type != return_value_type =>
-            {
-                errors.push(TypeCheckingError {
-                    message: format!(
-                        "{} expects a return type of {}, but you returned a {} value",
-                        function.name(),
-                        expected_return_type,
-                        return_value_type
-                    ),
-                })
-            }
+            (
+                FunctionReturnType::Type {
+                    return_type: expected_return_type,
+                    ..
+                },
+                Some(return_value_type),
+            ) if *expected_return_type != return_value_type => errors.push(TypeCheckingError {
+                message: format!(
+                    "{} expects a return type of {}, but you returned a {} value",
+                    function.name(),
+                    expected_return_type,
+                    return_value_type
+                ),
+            }),
             _ => {
                 // all is ok here
             }
@@ -87,15 +95,18 @@ pub(super) fn type_check_return_value(
 mod tests {
     use std::collections::HashMap;
 
-    use crate::ast::node::{
-        BinaryOperation, Expression, Function, FunctionId, FunctionReturnType, Node, Operation,
-        Type,
+    use crate::{
+        ast::node::{
+            BinaryOperation, Expression, Function, FunctionId, FunctionReturnType, Node, Operation,
+            Type,
+        },
+        token_stream::token::{Token, TokenSource},
     };
 
     #[test]
     fn type_check_return_value_successful_empty_call_stack() {
         let node = Node::FunctionReturn {
-            return_value: Some(10.into()),
+            return_value: Some((10, TokenSource::dummy_uint(10)).into()),
         };
 
         let result = node.type_check(&HashMap::new(), &mut HashMap::new(), None);
@@ -115,7 +126,7 @@ mod tests {
     #[test]
     fn type_check_return_value_successful_in_function() {
         let node = Node::FunctionReturn {
-            return_value: Some(true.into()),
+            return_value: Some((true, TokenSource::dummy_true()).into()),
         };
 
         let functions = HashMap::from_iter([(
@@ -124,7 +135,13 @@ mod tests {
                 id: FunctionId("my_function".to_owned()),
                 name: "my_function".to_owned(),
                 parameters: Vec::new(),
-                return_type: FunctionReturnType::Type(Type::Boolean),
+                return_type: FunctionReturnType::Type {
+                    return_type: Type::Boolean,
+                    function_signiture_separator_token: TokenSource::dummy(
+                        Token::FunctionSignitureSplitter,
+                    ),
+                    type_token: TokenSource::dummy(Token::TypeKeyword(Type::Boolean)),
+                },
                 body: Vec::new(),
             },
         )]);
@@ -163,8 +180,9 @@ mod tests {
         let node = Node::FunctionReturn {
             return_value: Some(Expression::Operation(Operation::Binary {
                 operation: BinaryOperation::Plus,
-                left: Box::new(10.into()),
-                right: Box::new(true.into()),
+                left: Box::new((10, TokenSource::dummy_uint(10)).into()),
+                right: Box::new((true, TokenSource::dummy_true()).into()),
+                operator_token: TokenSource::dummy(Token::PlusOperator),
             })),
         };
 
@@ -178,7 +196,7 @@ mod tests {
     #[test]
     fn type_check_return_top_level_incorrect_type() {
         let node = Node::FunctionReturn {
-            return_value: Some(true.into()),
+            return_value: Some((true, TokenSource::dummy_true()).into()),
         };
 
         let result = node.type_check(&HashMap::new(), &mut HashMap::new(), None);
@@ -191,7 +209,7 @@ mod tests {
     #[test]
     fn type_check_return_incorrect_value_from_function() {
         let node = Node::FunctionReturn {
-            return_value: Some(true.into()),
+            return_value: Some((true, TokenSource::dummy_true()).into()),
         };
 
         let functions = HashMap::from_iter([(
@@ -200,7 +218,13 @@ mod tests {
                 id: FunctionId("my_function".to_owned()),
                 name: "my_function".to_owned(),
                 parameters: Vec::new(),
-                return_type: FunctionReturnType::Type(Type::UInt),
+                return_type: FunctionReturnType::Type {
+                    return_type: Type::UInt,
+                    function_signiture_separator_token: TokenSource::dummy(
+                        Token::FunctionSignitureSplitter,
+                    ),
+                    type_token: TokenSource::dummy(Token::TypeKeyword(Type::UInt)),
+                },
                 body: Vec::new(),
             },
         )]);
@@ -226,7 +250,13 @@ mod tests {
                 id: FunctionId("my_function".to_owned()),
                 name: "my_function".to_owned(),
                 parameters: Vec::new(),
-                return_type: FunctionReturnType::Type(Type::UInt),
+                return_type: FunctionReturnType::Type {
+                    return_type: Type::UInt,
+                    function_signiture_separator_token: TokenSource::dummy(
+                        Token::FunctionSignitureSplitter,
+                    ),
+                    type_token: TokenSource::dummy(Token::TypeKeyword(Type::UInt)),
+                },
                 body: Vec::new(),
             },
         )]);
@@ -245,7 +275,7 @@ mod tests {
     #[test]
     fn type_check_return_value_from_void_function() {
         let node = Node::FunctionReturn {
-            return_value: Some(true.into()),
+            return_value: Some((true, TokenSource::dummy_true()).into()),
         };
 
         let functions = HashMap::from_iter([(

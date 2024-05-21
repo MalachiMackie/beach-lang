@@ -71,8 +71,9 @@ impl Function {
 mod tests {
     use std::collections::HashMap;
 
-    use crate::ast::node::{
-        Function, FunctionId, FunctionParameter, FunctionReturnType, Node, Type,
+    use crate::{
+        ast::node::{Function, FunctionId, FunctionParameter, FunctionReturnType, Node, Type},
+        token_stream::token::{Token, TokenSource},
     };
 
     use super::evaluate_custom_function;
@@ -82,7 +83,7 @@ mod tests {
         let result = evaluate_custom_function(
             &FunctionId("my_function".to_owned()),
             &[Node::FunctionReturn {
-                return_value: Some(1.into()),
+                return_value: Some((1, TokenSource::dummy_uint(1)).into()),
             }],
             HashMap::new(),
             &mut Vec::new(),
@@ -114,14 +115,20 @@ mod tests {
                 param_type: Type::UInt,
                 param_name: "param".to_owned(),
             }],
-            return_type: FunctionReturnType::Type(Type::Boolean),
+            return_type: FunctionReturnType::Type {
+                return_type: Type::Boolean,
+                function_signiture_separator_token: TokenSource::dummy(
+                    Token::FunctionSignitureSplitter,
+                ),
+                type_token: TokenSource::dummy(Token::TypeKeyword(Type::Boolean)),
+            },
             body: vec![Node::FunctionReturn {
-                return_value: Some(true.into()),
+                return_value: Some((true, TokenSource::dummy_true()).into()),
             }],
         };
 
         let result = function.evaluate(
-            vec![1.into()],
+            vec![(1, TokenSource::dummy_uint(1)).into()],
             &HashMap::new(),
             &HashMap::new(),
             &mut Vec::new(),
@@ -142,7 +149,7 @@ mod tests {
         };
 
         let result = function.evaluate(
-            vec![1.into()],
+            vec![(1, TokenSource::dummy_uint(1)).into()],
             &HashMap::new(),
             &HashMap::new(),
             &mut Vec::new(),
@@ -158,14 +165,20 @@ mod tests {
             id: FunctionId("my_function".to_owned()),
             name: "my_function".to_owned(),
             parameters: Vec::new(),
-            return_type: FunctionReturnType::Type(Type::Boolean),
+            return_type: FunctionReturnType::Type {
+                return_type: Type::Boolean,
+                function_signiture_separator_token: TokenSource::dummy(
+                    Token::FunctionSignitureSplitter,
+                ),
+                type_token: TokenSource::dummy(Token::TypeKeyword(Type::Boolean)),
+            },
             body: vec![Node::FunctionReturn {
-                return_value: Some(true.into()),
+                return_value: Some((true, TokenSource::dummy_true()).into()),
             }],
         };
 
         let result = function.evaluate(
-            vec![1.into()],
+            vec![(1, TokenSource::dummy_uint(1)).into()],
             &HashMap::new(),
             &HashMap::new(),
             &mut Vec::new(),

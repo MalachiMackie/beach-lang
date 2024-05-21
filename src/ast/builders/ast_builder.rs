@@ -59,7 +59,10 @@ impl AstBuilder {
 mod tests {
     use std::collections::HashMap;
 
-    use crate::ast::node::{Ast, Function, FunctionId, FunctionReturnType, Node};
+    use crate::{
+        ast::node::{Ast, Function, FunctionId, FunctionReturnType, Node},
+        token_stream::token::{Token, TokenSource},
+    };
 
     use super::AstBuilder;
 
@@ -82,8 +85,16 @@ mod tests {
         let actual = AstBuilder::default()
             .function_declaration(|function_declaration| {
                 function_declaration
-                    .name("my_function")
-                    .parameters(Vec::new())
+                    .name(
+                        "my_function",
+                        TokenSource::dummy_function(),
+                        TokenSource::dummy(Token::Identifier("my_function".to_owned())),
+                        TokenSource::dummy_left_parenthesis(),
+                        TokenSource::dummy_right_parenthesis(),
+                        TokenSource::dummy_left_curley_brace(),
+                        TokenSource::dummy_right_curley_brace(),
+                    )
+                    .no_parameters()
                     .void()
                     .body(|body| body.build())
             })
